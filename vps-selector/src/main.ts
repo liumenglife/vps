@@ -1,19 +1,6 @@
-let greetInputEl: HTMLInputElement | null;
-let greetMsgEl: HTMLElement | null;
-
-function showPlaceholder() {
-  if (greetMsgEl && greetInputEl) {
-    greetMsgEl.textContent = greetInputEl.value.trim()
-      ? `Hello, ${greetInputEl.value.trim()}!`
-      : "Hello!";
-  }
-}
+import { createApp } from './app';
 
 window.addEventListener("DOMContentLoaded", () => {
-  greetInputEl = document.querySelector("#greet-input");
-  greetMsgEl = document.querySelector("#greet-msg");
-  document.querySelector("#greet-form")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    showPlaceholder();
-  });
+  const root = document.querySelector<HTMLElement>(".container") ?? document.body;
+  createApp(root);
 });
