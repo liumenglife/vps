@@ -18,15 +18,7 @@
 - [ ] 测试与验证
 
 ## 5. 编码阶段任务清单
-- [ ] Task 1：Tauri 脚手架与最小运行。
-- [ ] Task 2：中文 TOML 配置解析与校验。
-- [ ] Task 3：核心模型与探测解析。
-- [ ] Task 4：指标聚合与评分引擎。
-- [ ] Task 5：Markdown 报告生成。
-- [ ] Task 6：探测调度与一次立即测试。
-- [ ] Task 7：Tauri 后端命令。
-- [ ] Task 8：前端 GUI 页面。
-- [ ] Task 9：端到端验收与修复。
+- [•] Task 2：中文 TOML 配置解析与校验。
 
 ## 6. 子 Agent 执行协议
 - 遇到可以独立完成的编码任务，优先采用 Subagent-Driven Development。
@@ -44,12 +36,13 @@
 - `[•]` 代表正在执行
 
 ## 9. 当前正在做
-- 准备派发 Task 1 子 Agent，按 TDD 与编码流程规范推进脚手架。
+- 准备派发 Task 2 子 Agent，按 TDD 实现中文 TOML 配置解析与校验。
 
 ## 10. 已完成里程碑
 - 已在 `main` 建立初始基线提交。
 - 已创建业务分支 `feature/task-101` 与 worktree `.worktree/feature/task-101`。
 - 已归档初始化规划批次到 `history.md`。
+- Task 1 已完成规格审查、代码质量审查、QA 验证并提交。
 
 ## 11. 当前阻塞
 - 无。
@@ -58,7 +51,7 @@
 - 无。
 
 ## 13. 下一步唯一动作
-- 派发 Task 1 子 Agent 创建 Tauri 脚手架，完成后进入规格审查、代码审查、QA、提交和规划归档循环。
+- 派发 Task 2 子 Agent 创建 `error.rs`、`config.rs`、配置测试和 TOML fixture，完成后进入规格审查、代码审查、QA、提交和规划归档循环。
 
 ## 14. 恢复提示
 - Session 恢复时，请检查此文件的状态，并沿着“当前阶段”与“下一步唯一动作”继续推进。

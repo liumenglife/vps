@@ -11,3 +11,13 @@
 - [✓] 初始化 `docs/planning/current.md`、`docs/planning/history.md`、`docs/planning/decisions.md`。
 - [✓] 读取 `AGENTS.md` 与项目规范。
 - [✓] 确认后续开发以 planning 文件作为主线真相。
+
+### 2026-06-07 批次：Task 1 Tauri 脚手架与最小运行
+- [✓] 创建 `vps-selector/` Tauri v2 vanilla TypeScript 脚手架。
+- [✓] 安装 npm 依赖并生成 lockfile。
+- [✓] 按计划配置 Rust 依赖：`tauri`、`serde`、`serde_json`、`toml`、`tokio`、`thiserror`、`chrono`。
+- [✓] 修复脚手架安全与语言规范：启用最小 CSP、关闭全局 Tauri API、移除未使用 opener 插件、将 README 改为简体中文。
+- [✓] 规格审查通过。
+- [✓] 代码质量审查通过。
+- [✓] QA 验证通过：`cargo check --manifest-path src-tauri/Cargo.toml`、`npm run build`。
+- [✓] 已提交：`5c77c9b feat: 创建 VPS 选择工具脚手架`。
