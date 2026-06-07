@@ -30,3 +30,13 @@
 - [✓] 代码质量审查通过。
 - [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml --test config_test`、`cargo check --manifest-path src-tauri/Cargo.toml`。
 - [✓] 已提交：`88d3919 feat: 实现中文配置解析`。
+
+### 2026-06-07 批次：Task 3 核心模型与探测解析
+- [✓] 创建 `models.rs`，定义探测样本、TCP 结果、目标指标和目标评分模型。
+- [✓] 创建 `probe.rs`，实现 ping 延迟、丢包率、traceroute 跳数解析、TCP 探测和 macOS 命令探测函数。
+- [✓] 创建 `probe_parse_test.rs`，覆盖 macOS ping、丢包率、traceroute 解析。
+- [✓] 修复命令失败错误信息中文化。
+- [✓] 规格审查通过。
+- [✓] 代码质量审查通过。
+- [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml --test probe_parse_test`、`cargo check --manifest-path src-tauri/Cargo.toml`。
+- [✓] 已提交：`e4559c2 feat: 实现探测解析模型`。
