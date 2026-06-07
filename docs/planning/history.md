@@ -50,3 +50,12 @@
 - [✓] 代码质量审查通过。
 - [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml --test scoring_test`、`cargo check --manifest-path src-tauri/Cargo.toml`。
 - [✓] 已提交：`b3dc6ef feat: 实现指标聚合评分`。
+
+### 2026-06-07 批次：Task 5 Markdown 报告生成
+- [✓] 创建 `report.rs`，实现中文 Markdown 报告生成。
+- [✓] 创建 `report_test.rs`，覆盖报告标题、权重、候选 IP、城市和推荐结论。
+- [✓] 修复排名和推荐结论排序，确保按总分降序选择最高分目标。
+- [✓] 规格审查通过。
+- [✓] 代码质量审查通过。
+- [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml --test report_test`、`cargo check --manifest-path src-tauri/Cargo.toml`。
+- [✓] 已提交：`b751ce8 feat: 生成中文测试报告`。
