@@ -40,3 +40,13 @@
 - [✓] 代码质量审查通过。
 - [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml --test probe_parse_test`、`cargo check --manifest-path src-tauri/Cargo.toml`。
 - [✓] 已提交：`e4559c2 feat: 实现探测解析模型`。
+
+### 2026-06-07 批次：Task 4 指标聚合与评分引擎
+- [✓] 创建 `metrics.rs`，实现可连接率、丢包率、延迟、P95、抖动、TCP、连续失败和缺失指标聚合。
+- [✓] 创建 `scoring.rs`，实现稳定性、分时段、性能、总分、可信度和原因输出。
+- [✓] 创建 `scoring_test.rs`，覆盖评分高低、低可信度、聚合关键路径和分时段原因。
+- [✓] 修复缺失指标中文说明和分时段样本不完整判定。
+- [✓] 规格审查通过。
+- [✓] 代码质量审查通过。
+- [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml --test scoring_test`、`cargo check --manifest-path src-tauri/Cargo.toml`。
+- [✓] 已提交：`b3dc6ef feat: 实现指标聚合评分`。
