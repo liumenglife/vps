@@ -1,0 +1,127 @@
+pub fn generate_markdown_report(
+    config: &crate::config::AppConfig,
+    scores: &[crate::models::TargetScore],
+    metrics: &[crate::models::TargetMetrics],
+) -> String {
+    let mut report = String::new();
+    let mut ranked_scores = scores.iter().collect::<Vec<_>>();
+    ranked_scores.sort_by(|a, b| b.total_score.total_cmp(&a.total_score));
+
+    report.push_str("# VPS 线路测试报告\n\n");
+
+    report.push_str("## 测试配置\n\n");
+    report.push_str(&format!("- 默认测试分钟数：{}\n", config.probe.default_duration_minutes));
+    report.push_str(&format!("- ICMP 间隔毫秒：{}\n", config.probe.icmp_interval_ms));
+    report.push_str(&format!("- TCP 超时毫秒：{}\n", config.probe.tcp_timeout_ms));
+    report.push_str(&format!("- 并发数：{}\n", config.probe.concurrency));
+    report.push_str(&format!("- 白天时段：{}\n", config.probe.day_period));
+    report.push_str(&format!("- 晚上时段：{}\n", config.probe.night_period));
+    report.push_str(&format!("- 默认端口：{}\n\n", join_values(&config.ports.default_ports)));
+
+    report.push_str("## 评分权重\n\n");
+    report.push_str("### 总权重\n\n");
+    report.push_str(&format!("- 稳定性：{:.2}\n", config.weights.stability));
+    report.push_str(&format!("- 分时段表现：{:.2}\n", config.weights.time_period));
+    report.push_str(&format!("- 性能：{:.2}\n\n", config.weights.performance));
+    report.push_str("### 稳定性权重\n\n");
+    report.push_str(&format!("- 可连接性：{:.2}\n", config.stability_weights.connectivity));
+    report.push_str(&format!("- 丢包率：{:.2}\n", config.stability_weights.packet_loss));
+    report.push_str(&format!("- 连续失败：{:.2}\n\n", config.stability_weights.consecutive_failure));
+    report.push_str("### 分时段权重\n\n");
+    report.push_str(&format!("- 白天：{:.2}\n", config.time_period_weights.day));
+    report.push_str(&format!("- 晚上：{:.2}\n\n", config.time_period_weights.night));
+    report.push_str("### 性能权重\n\n");
+    report.push_str(&format!("- 平均延迟：{:.2}\n", config.performance_weights.avg_latency));
+    report.push_str(&format!("- P95 延迟：{:.2}\n", config.performance_weights.p95_latency));
+    report.push_str(&format!("- 抖动：{:.2}\n", config.performance_weights.jitter));
+    report.push_str(&format!("- TCP 连接耗时：{:.2}\n", config.performance_weights.tcp_connect_latency));
+    report.push_str(&format!("- 路由跳数：{:.2}\n\n", config.performance_weights.traceroute_hops));
+
+    report.push_str("## 候选 IP\n\n");
+    for target in &config.targets {
+        let ports = target.ports.as_ref().unwrap_or(&config.ports.default_ports);
+        report.push_str(&format!("- {}（{}）：端口 {}\n", target.ip, target.city, join_values(ports)));
+    }
+    report.push('\n');
+
+    report.push_str("## 排名\n\n");
+    report.push_str("| 排名 | IP | 城市 | 总分 | 稳定性 | 分时段 | 性能 | 可信度 |\n");
+    report.push_str("| --- | --- | --- | ---: | ---: | ---: | ---: | --- |\n");
+    for (index, score) in ranked_scores.iter().enumerate() {
+        report.push_str(&format!(
+            "| {} | {} | {} | {:.2} | {:.2} | {:.2} | {:.2} | {} |\n",
+            index + 1,
+            score.ip,
+            score.city,
+            score.total_score,
+            score.stability_score,
+            score.time_period_score,
+            score.performance_score,
+            score.confidence
+        ));
+    }
+    report.push('\n');
+
+    report.push_str("## IP 详情\n\n");
+    for metric in metrics {
+        report.push_str(&format!("### {}（{}）\n\n", metric.ip, metric.city));
+        report.push_str(&format!("- 样本数：{}\n", metric.sample_count));
+        report.push_str(&format!("- 测试时段：{}\n", metric.test_period));
+        report.push_str(&format!("- 可连接率：{}\n", format_percent(metric.connectivity_rate)));
+        report.push_str(&format!("- ICMP 丢包率：{}\n", format_percent(metric.icmp_packet_loss_rate)));
+        report.push_str(&format!("- 平均延迟：{}\n", format_ms(metric.avg_latency_ms)));
+        report.push_str(&format!("- P95 延迟：{}\n", format_ms(metric.p95_latency_ms)));
+        report.push_str(&format!("- 抖动：{}\n", format_ms(metric.jitter_ms)));
+        report.push_str(&format!("- TCP 成功率：{}\n", format_percent(metric.tcp_success_rate)));
+        report.push_str(&format!("- TCP 平均连接耗时：{}\n", format_ms(metric.tcp_avg_latency_ms)));
+        report.push_str(&format!("- 连续失败：{}\n", metric.consecutive_failures));
+        report.push_str(&format!("- 路由跳数：{}\n\n", format_optional(metric.traceroute_hops)));
+    }
+
+    report.push_str("## 缺失数据说明\n\n");
+    let mut has_missing = false;
+    for metric in metrics {
+        if metric.missing_indicators.is_empty() {
+            continue;
+        }
+        has_missing = true;
+        report.push_str(&format!("- {}（{}）：{}\n", metric.ip, metric.city, metric.missing_indicators.join("、")));
+    }
+    if !has_missing {
+        report.push_str("- 无缺失数据。\n");
+    }
+    report.push('\n');
+
+    report.push_str("## 推荐结论\n\n");
+    if let Some(best) = ranked_scores.first() {
+        let reasons = if best.reasons.is_empty() {
+            "无额外说明".to_string()
+        } else {
+            best.reasons.join("、")
+        };
+        report.push_str(&format!(
+            "推荐选择 {}（{}），总分 {:.2}，可信度：{}。推荐理由：{}。\n",
+            best.ip, best.city, best.total_score, best.confidence, reasons
+        ));
+    } else {
+        report.push_str("暂无可推荐 IP。\n");
+    }
+
+    report
+}
+
+fn join_values<T: ToString>(values: &[T]) -> String {
+    values.iter().map(ToString::to_string).collect::<Vec<_>>().join("、")
+}
+
+fn format_percent(value: Option<f64>) -> String {
+    value.map(|v| format!("{:.2}%", v * 100.0)).unwrap_or_else(|| "缺失".into())
+}
+
+fn format_ms(value: Option<f64>) -> String {
+    value.map(|v| format!("{v:.2} ms")).unwrap_or_else(|| "缺失".into())
+}
+
+fn format_optional<T: ToString>(value: Option<T>) -> String {
+    value.map(|v| v.to_string()).unwrap_or_else(|| "缺失".into())
+}
