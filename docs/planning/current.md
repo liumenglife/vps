@@ -1,24 +1,32 @@
 # 当前任务状态 (Current Planning)
 
 ## 1. 主目标
-- [ ] 请在此处填写项目的核心业务目标。
+- [•] 按 `docs/superpowers/plans/101-vps-route-selection-implementation-plan.md` 交付 macOS 优先的 VPS 线路选择 Tauri GUI MVP。
 
 ## 2. 成功定义
-- [ ] 请在此处填写判定主目标完成的具体可验收条件。
+- [ ] Tauri v2 GUI 可校验中文 TOML、发起立即测试、展示排名详情、预览并导出中文 Markdown 报告。
+- [ ] Rust 后端完成中文配置解析、ICMP/TCP/traceroute 探测、指标聚合、权重评分、报告生成和 Tauri 命令。
+- [ ] `cargo test --manifest-path src-tauri/Cargo.toml`、`cargo check --manifest-path src-tauri/Cargo.toml`、`npm run build` 通过。
+- [ ] `docs/reports/verification/101-vps-route-selection-mvp-verification.md` 记录验收结果。
 
 ## 3. 非目标
-- 请在此处填写当前阶段不需要做的事情，防止范围蔓延。
+- 不交付后台常驻、HTTP 健康检查、CSV、自动购买、Windows/Linux 兼容。
 
 ## 4. 当前阶段
-- [ ] 需求分析与架构设计 (Spec & Plan)
-- [ ] 核心代码开发
+- [✓] 需求分析与架构设计 (Spec & Plan)
+- [•] 核心代码开发
 - [ ] 测试与验证
 
 ## 5. 编码阶段任务清单
-- 先把 spec / plan 拆成可执行任务，再写到这里。
-- 每个任务都标注状态，例如 `[ ]` / `[•]` / `[✓]`。
-- 每次派发子 Agent 前，主 Agent 必须先更新这里，避免任务只留在聊天里。
-- 当任务批次结束时，把整批任务迁移到 `history.md`，不要只搬单个 Task。
+- [ ] Task 1：Tauri 脚手架与最小运行。
+- [ ] Task 2：中文 TOML 配置解析与校验。
+- [ ] Task 3：核心模型与探测解析。
+- [ ] Task 4：指标聚合与评分引擎。
+- [ ] Task 5：Markdown 报告生成。
+- [ ] Task 6：探测调度与一次立即测试。
+- [ ] Task 7：Tauri 后端命令。
+- [ ] Task 8：前端 GUI 页面。
+- [ ] Task 9：端到端验收与修复。
 
 ## 6. 子 Agent 执行协议
 - 遇到可以独立完成的编码任务，优先采用 Subagent-Driven Development。
@@ -36,10 +44,12 @@
 - `[•]` 代表正在执行
 
 ## 9. 当前正在做
-- 初始化项目规划文件。
+- 准备派发 Task 1 子 Agent，按 TDD 与编码流程规范推进脚手架。
 
 ## 10. 已完成里程碑
-- 无。
+- 已在 `main` 建立初始基线提交。
+- 已创建业务分支 `feature/task-101` 与 worktree `.worktree/feature/task-101`。
+- 已归档初始化规划批次到 `history.md`。
 
 ## 11. 当前阻塞
 - 无。
@@ -48,7 +58,7 @@
 - 无。
 
 ## 13. 下一步唯一动作
-- 明确并细化主目标和成功定义，然后把编码阶段任务按子 Agent 执行顺序写入上面的任务清单。
+- 派发 Task 1 子 Agent 创建 Tauri 脚手架，完成后进入规格审查、代码审查、QA、提交和规划归档循环。
 
 ## 14. 恢复提示
 - Session 恢复时，请检查此文件的状态，并沿着“当前阶段”与“下一步唯一动作”继续推进。

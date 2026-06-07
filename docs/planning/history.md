@@ -6,4 +6,8 @@
 - 不要把历史批次继续留在 current.md。
 
 ## 2. 历史批次
-- 无。
+
+### 2026-06-07 批次：规划锚点初始化
+- [✓] 初始化 `docs/planning/current.md`、`docs/planning/history.md`、`docs/planning/decisions.md`。
+- [✓] 读取 `AGENTS.md` 与项目规范。
+- [✓] 确认后续开发以 planning 文件作为主线真相。
