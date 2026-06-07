@@ -59,3 +59,12 @@
 - [✓] 代码质量审查通过。
 - [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml --test report_test`、`cargo check --manifest-path src-tauri/Cargo.toml`。
 - [✓] 已提交：`b751ce8 feat: 生成中文测试报告`。
+
+### 2026-06-07 批次：Task 6 探测调度与一次立即测试
+- [✓] 创建 `scheduler.rs`，实现立即探测、时段判断、并发限制、采样、聚合、评分和报告生成。
+- [✓] 创建 `scheduler_test.rs`，覆盖白天、晚上、其他时段和运行中跳过规则。
+- [✓] 修复单目标失败降级、短时采样边界和 interval sleep 超时风险。
+- [✓] 规格审查通过。
+- [✓] 代码质量审查通过。
+- [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml`、`cargo check --manifest-path src-tauri/Cargo.toml`。
+- [✓] 已提交：`0078bb0 feat: 实现探测调度`。
