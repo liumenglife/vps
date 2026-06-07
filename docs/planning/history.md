@@ -68,3 +68,13 @@
 - [✓] 代码质量审查通过。
 - [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml`、`cargo check --manifest-path src-tauri/Cargo.toml`。
 - [✓] 已提交：`0078bb0 feat: 实现探测调度`。
+
+### 2026-06-07 批次：Task 7 Tauri 后端命令
+- [✓] 创建 `commands.rs`，实现配置校验和启动探测命令。
+- [✓] 注册 `validate_config_text` 和 `start_probe` Tauri 命令。
+- [✓] 创建 `commands_test.rs`，覆盖配置校验成功与中文错误。
+- [✓] 修复前端继续调用已移除 `greet` 命令的问题。
+- [✓] 规格审查通过。
+- [✓] 代码质量审查通过。
+- [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml --test commands_test`、`cargo check --manifest-path src-tauri/Cargo.toml`、`npm run build`。
+- [✓] 已提交：`2777614 feat: 注册 Tauri 探测命令`。
