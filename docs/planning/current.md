@@ -6,8 +6,8 @@
 ## 2. 成功定义
 - [ ] Tauri v2 GUI 可校验中文 TOML、发起立即测试、展示排名详情、预览并导出中文 Markdown 报告。
 - [ ] Rust 后端完成中文配置解析、ICMP/TCP/traceroute 探测、指标聚合、权重评分、报告生成和 Tauri 命令。
-- [ ] `cargo test --manifest-path src-tauri/Cargo.toml`、`cargo check --manifest-path src-tauri/Cargo.toml`、`npm run build` 通过。
-- [ ] `docs/reports/verification/101-vps-route-selection-mvp-verification.md` 记录验收结果。
+- [✓] `cargo test --manifest-path src-tauri/Cargo.toml`、`cargo check --manifest-path src-tauri/Cargo.toml`、`npm run build` 通过。
+- [✓] `docs/reports/verification/101-vps-route-selection-mvp-verification.md` 记录验收结果。
 
 ## 3. 非目标
 - 不交付后台常驻、HTTP 健康检查、CSV、自动购买、Windows/Linux 兼容。
@@ -15,7 +15,7 @@
 ## 4. 当前阶段
 - [✓] 需求分析与架构设计 (Spec & Plan)
 - [•] 核心代码开发
-- [ ] 测试与验证
+- [•] 测试与验证
 
 ## 5. 编码阶段任务清单
 - [•] Task 9：端到端验收与修复。
@@ -36,7 +36,7 @@
 - `[•]` 代表正在执行
 
 ## 9. 当前正在做
-- 准备执行 Task 9 端到端验证、必要修复和验证报告。
+- Task 9 自动验证已完成，正在处理计划指定 `cargo tauri dev` 命令不可用的验收阻塞。
 
 ## 10. 已完成里程碑
 - 已在 `main` 建立初始基线提交。
@@ -50,15 +50,17 @@
 - Task 6 已完成规格审查、代码质量审查、QA 验证并提交。
 - Task 7 已完成规格审查、代码质量审查、QA 验证并提交。
 - Task 8 已完成规格审查、代码质量审查、QA 验证并提交。
+- Task 9 自动验证已完成：Rust 测试、Rust 编译、前端构建均通过。
+- 已创建验证报告：`docs/reports/verification/101-vps-route-selection-mvp-verification.md`。
 
 ## 11. 当前阻塞
-- 无。
+- 计划指定的 `cargo tauri dev` 命令未通过：本机缺少 `cargo-tauri` Cargo 子命令。等价命令 `npm run tauri -- dev` 已成功启动 Vite 和 Tauri 二进制。
 
 ## 12. 活跃支线
 - 无。
 
 ## 13. 下一步唯一动作
-- 执行 Task 9：运行 Rust 测试、Rust 编译、前端构建、Tauri GUI 验收，并写入验证报告。
+- 决定是否安装 `cargo-tauri` 后重跑 `cargo tauri dev`，或接受 `npm run tauri -- dev` 作为本项目脚手架等价验收路径。
 
 ## 14. 恢复提示
 - Session 恢复时，请检查此文件的状态，并沿着“当前阶段”与“下一步唯一动作”继续推进。
