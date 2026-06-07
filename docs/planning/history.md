@@ -21,3 +21,12 @@
 - [✓] 代码质量审查通过。
 - [✓] QA 验证通过：`cargo check --manifest-path src-tauri/Cargo.toml`、`npm run build`。
 - [✓] 已提交：`5c77c9b feat: 创建 VPS 选择工具脚手架`。
+
+### 2026-06-07 批次：Task 2 中文 TOML 配置解析与校验
+- [✓] 创建 `error.rs` 并定义中文 `AppError`。
+- [✓] 创建 `config.rs`，实现中文 TOML 结构体、解析和校验。
+- [✓] 创建配置测试与 `valid-config.toml`、`invalid-weight.toml` fixtures。
+- [✓] 规格审查通过。
+- [✓] 代码质量审查通过。
+- [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml --test config_test`、`cargo check --manifest-path src-tauri/Cargo.toml`。
+- [✓] 已提交：`88d3919 feat: 实现中文配置解析`。
