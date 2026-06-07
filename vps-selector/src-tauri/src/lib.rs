@@ -4,6 +4,7 @@ pub mod metrics;
 pub mod models;
 pub mod probe;
 pub mod report;
+pub mod scheduler;
 pub mod scoring;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
