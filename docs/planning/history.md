@@ -78,3 +78,12 @@
 - [✓] 代码质量审查通过。
 - [✓] QA 验证通过：`cargo test --manifest-path src-tauri/Cargo.toml --test commands_test`、`cargo check --manifest-path src-tauri/Cargo.toml`、`npm run build`。
 - [✓] 已提交：`2777614 feat: 注册 Tauri 探测命令`。
+
+### 2026-06-07 批次：Task 8 前端 GUI 页面
+- [✓] 创建 Tauri API 封装、配置页、测试页、结果页、报告页和应用状态路由。
+- [✓] 实现中文 TOML 编辑、配置校验、立即测试、排行榜、推荐结论、报告预览和 `.md` 导出。
+- [✓] 修复结果页与后端 Markdown 排名表、推荐结论格式不匹配的问题。
+- [✓] 规格审查通过。
+- [✓] 代码质量审查通过。
+- [✓] QA 验证通过：`npm run build`、`cargo check --manifest-path src-tauri/Cargo.toml`。
+- [✓] 已提交：`d7cca0d feat: 实现中文前端界面`。
