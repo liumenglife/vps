@@ -105,3 +105,10 @@
 - [✓] 连续失败、丢包率、延迟抖动支持负向激励，最终展示分限制在 `0..100`。
 - [✓] 新增 ICMP 成功样本数，成功样本为 `0` 或 `1` 时稳定性重罚。
 - [✓] 报告显示新稳定性权重，业务 E2E 覆盖真实三地 IP 链路。
+
+### 2026-06-08 批次：PR 前收尾验证
+- [✓] 新鲜验证通过：`cargo test --manifest-path src-tauri/Cargo.toml`。
+- [✓] 新鲜验证通过：`cargo check --manifest-path src-tauri/Cargo.toml`。
+- [✓] 新鲜验证通过：`npm run build`。
+- [✓] 新鲜验证通过：`npm run e2e`，Playwright 8 项通过。
+- [✓] 当前功能分支准备推送并创建面向 `main` 的 PR。
