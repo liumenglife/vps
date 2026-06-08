@@ -10,9 +10,6 @@ jobs:
   backend:
     name: Rust
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: vps-selector
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -38,9 +35,6 @@ jobs:
   frontend:
     name: Frontend and E2E
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: vps-selector
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -50,7 +44,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: vps-selector/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -69,5 +63,5 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: playwright-report
-          path: vps-selector/playwright-report/
+          path: playwright-report/
           retention-days: 30
