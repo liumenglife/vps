@@ -28,6 +28,8 @@ async fn runs_business_e2e_from_chinese_toml_to_markdown_report() {
     assert!(report.contains("本次测试时段"));
     assert!(!report.contains("伪综合排名"));
     assert!(report.contains("IP 详情"));
+    assert!(report.contains("延迟抖动"));
+    assert!(!report.contains("可连接性：0.60"));
     assert!(report.contains("推荐结论"));
     assert!(report.contains("192.3.81.8"));
     assert!(report.contains("纽约"));

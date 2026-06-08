@@ -38,7 +38,11 @@ fn generates_chinese_markdown_report_with_weights_and_recommendation() {
     assert!(report.contains("VPS 线路测试报告"));
     assert!(report.contains("评分权重"));
     assert!(report.contains("稳定性"));
-    assert!(report.contains("可连接性"));
+    assert!(!report.contains("- 可连接性："));
+    assert!(report.contains("- 连续失败：0.45"));
+    assert!(report.contains("- 丢包率：0.40"));
+    assert!(report.contains("- 延迟抖动：0.15"));
+    assert!(report.contains("可连接率"));
     assert!(report.contains("192.3.81.8"));
     assert!(report.contains("纽约"));
     assert!(report.contains("推荐结论"));

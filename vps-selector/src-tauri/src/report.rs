@@ -102,19 +102,7 @@ pub fn generate_markdown_report(
         config.weights.time_period
     ));
     report.push_str(&format!("- 性能：{:.2}\n\n", config.weights.performance));
-    report.push_str("### 稳定性权重\n\n");
-    report.push_str(&format!(
-        "- 连续失败：{:.2}\n",
-        config.stability_weights.consecutive_failure
-    ));
-    report.push_str(&format!(
-        "- 丢包率：{:.2}\n",
-        config.stability_weights.packet_loss
-    ));
-    report.push_str(&format!(
-        "- 延迟抖动：{:.2}\n\n",
-        config.stability_weights.jitter
-    ));
+    push_stability_weights(&mut report, config);
     report.push_str("### 分时段权重\n\n");
     report.push_str(&format!("- 白天：{:.2}\n", config.time_period_weights.day));
     report.push_str(&format!(
@@ -245,6 +233,22 @@ pub fn generate_markdown_report(
     }
 
     report
+}
+
+fn push_stability_weights(report: &mut String, config: &AppConfig) {
+    report.push_str("### 稳定性权重\n\n");
+    report.push_str(&format!(
+        "- 连续失败：{:.2}\n",
+        config.stability_weights.consecutive_failure
+    ));
+    report.push_str(&format!(
+        "- 丢包率：{:.2}\n",
+        config.stability_weights.packet_loss
+    ));
+    report.push_str(&format!(
+        "- 延迟抖动：{:.2}\n\n",
+        config.stability_weights.jitter
+    ));
 }
 
 fn merge_cross_period_metrics(
