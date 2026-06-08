@@ -87,3 +87,11 @@
 - [✓] 代码质量审查通过。
 - [✓] QA 验证通过：`npm run build`、`cargo check --manifest-path src-tauri/Cargo.toml`。
 - [✓] 已提交：`d7cca0d feat: 实现中文前端界面`。
+
+### 2026-06-07 批次：Task 9 端到端验收与修复
+- [✓] Rust 测试通过：`cargo test --manifest-path src-tauri/Cargo.toml`。
+- [✓] Rust 编译通过：`cargo check --manifest-path src-tauri/Cargo.toml`。
+- [✓] 前端构建通过：`npm run build`。
+- [✓] 安装并复核真实 `cargo-tauri` Cargo 子命令：`cargo tauri --version` 输出 `tauri-cli 2.11.2`。
+- [✓] `cargo tauri dev` 可进入启动流程，用户终端已成功打开 GUI。
+- [✓] 创建并更新验证报告：`docs/reports/verification/101-vps-route-selection-mvp-verification.md`。
