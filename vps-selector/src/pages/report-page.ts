@@ -1,4 +1,5 @@
 import type { AppController } from '../app';
+import { exportMarkdownReport } from '../utils/report-export';
 
 export function renderReportPage(root: HTMLElement, controller: AppController) {
   root.innerHTML = `
@@ -13,22 +14,49 @@ export function renderReportPage(root: HTMLElement, controller: AppController) {
         <button id="back-result" type="button" class="secondary-button">返回结果</button>
       </div>
     </section>
+    <p id="report-feedback" class="feedback" role="status"></p>
     <pre class="report-preview"><code></code></pre>
   `;
 
   const code = root.querySelector<HTMLElement>('.report-preview code');
+  const feedback = root.querySelector<HTMLElement>('#report-feedback');
+  const exportButton = root.querySelector<HTMLButtonElement>('#export-report');
+  const hasReport = controller.state.reportMarkdown.trim().length > 0;
+
   if (code) {
     code.textContent = controller.state.reportMarkdown || '暂无报告，请先完成测试。';
   }
 
   root.querySelector('#back-result')?.addEventListener('click', () => controller.navigate('result'));
-  root.querySelector('#export-report')?.addEventListener('click', () => {
-    const blob = new Blob([controller.state.reportMarkdown], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `vps-route-report-${new Date().toISOString().slice(0, 10)}.md`;
-    link.click();
-    URL.revokeObjectURL(url);
+  exportButton?.addEventListener('click', async () => {
+    if (!feedback) {
+      return;
+    }
+
+    if (!hasReport) {
+      feedback.textContent = '暂无报告可导出';
+      feedback.className = 'feedback is-error';
+      return;
+    }
+
+    exportButton.disabled = true;
+    feedback.textContent = '正在导出...';
+    feedback.className = 'feedback';
+
+    try {
+      const result = await exportMarkdownReport(controller.state.reportMarkdown);
+      if (result.status === 'cancelled') {
+        feedback.textContent = '已取消导出';
+        feedback.className = 'feedback';
+      } else {
+        feedback.textContent = `已导出：${result.path}`;
+        feedback.className = 'feedback is-success';
+      }
+    } catch (error) {
+      feedback.textContent = `导出失败：${String(error)}`;
+      feedback.className = 'feedback is-error';
+    } finally {
+      exportButton.disabled = false;
+    }
   });
 }

@@ -1,34 +1,36 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use chrono::Local;
+use chrono::{DateTime, FixedOffset, Local, Utc};
 use tokio::sync::Semaphore;
 
 use crate::config::{AppConfig, Target};
 use crate::error::AppError;
+use crate::history::{
+    append_history_record, comparison_history_metrics, load_history, save_history,
+};
 use crate::metrics::aggregate_metrics;
-use crate::models::{ProbeSample, TargetMetrics, TargetScore};
+use crate::models::{ComprehensiveRanking, ProbeSample, TargetMetrics, TargetScore};
 use crate::probe::{run_ping_once, run_traceroute_once, tcp_connect};
-use crate::report::generate_markdown_report;
-use crate::scoring::score_target;
+use crate::report::{build_comprehensive_ranking, generate_markdown_report};
 
 pub async fn run_probe_once(
     config: &AppConfig,
 ) -> Result<(Vec<TargetMetrics>, Vec<TargetScore>, String), AppError> {
-    let now = Local::now();
-    let test_period = determine_period(
-        &now.format("%H:%M").to_string(),
-        &config.probe.day_period,
-        &config.probe.night_period,
-    );
+    let now = Utc::now();
+    let test_period =
+        determine_beijing_period(now, &config.probe.day_period, &config.probe.night_period);
     let semaphore = Arc::new(Semaphore::new(config.probe.concurrency.max(1)));
     let mut tasks = Vec::with_capacity(config.targets.len());
 
     for target in config.targets.clone() {
         let fallback_target = target.clone();
-        let permit = semaphore.clone().acquire_owned().await.map_err(|error| {
-            AppError::Probe(format!("并发控制初始化失败：{error}"))
-        })?;
+        let permit = semaphore
+            .clone()
+            .acquire_owned()
+            .await
+            .map_err(|error| AppError::Probe(format!("并发控制初始化失败：{error}")))?;
         let default_ports = config.ports.default_ports.clone();
         let probe_settings = config.probe.clone();
         let target_period = test_period.clone();
@@ -57,14 +59,33 @@ pub async fn run_probe_once(
         metrics.push(metric);
     }
 
-    let mut scores = metrics
-        .iter()
-        .map(|metric| score_target(config, metric))
-        .collect::<Vec<_>>();
-    scores.sort_by(|a, b| b.total_score.total_cmp(&a.total_score));
-    let report = generate_markdown_report(config, &scores, &metrics);
+    let current_metrics = metrics;
+    let history_path = history_cache_path(config);
+    let history_records = load_history(&history_path);
+    let comparison_metrics = comparison_history_metrics(&history_records, now);
+    let ComprehensiveRanking {
+        metrics,
+        scores,
+        ranking_basis,
+    } = build_comprehensive_ranking(config, current_metrics.clone(), Some(comparison_metrics));
+    let updated_history = append_history_record(history_records, current_metrics, now);
+    save_history(&history_path, &updated_history);
+    let report = generate_markdown_report(config, &scores, &metrics, &ranking_basis);
 
     Ok((metrics, scores, report))
+}
+
+pub fn determine_beijing_period(
+    utc_now: DateTime<Utc>,
+    day_period: &str,
+    night_period: &str,
+) -> String {
+    let beijing = utc_now.with_timezone(&FixedOffset::east_opt(8 * 3600).unwrap());
+    determine_period(
+        &beijing.format("%H:%M").to_string(),
+        day_period,
+        night_period,
+    )
 }
 
 pub fn determine_period(now_hhmm: &str, day_period: &str, night_period: &str) -> String {
@@ -86,6 +107,75 @@ pub fn should_skip_scheduled_run(is_running: bool) -> bool {
     is_running
 }
 
+pub fn history_cache_path(config: &AppConfig) -> PathBuf {
+    let mut candidates = config
+        .targets
+        .iter()
+        .map(|target| {
+            let mut ports = target
+                .ports
+                .clone()
+                .unwrap_or_else(|| config.ports.default_ports.clone());
+            ports.sort_unstable();
+            (target.ip.clone(), target.city.clone(), ports)
+        })
+        .collect::<Vec<_>>();
+    candidates.sort();
+
+    let mut key = 0xcbf29ce484222325_u64;
+    key = hash_str(key, &config.probe.day_period);
+    key = hash_str(key, &config.probe.night_period);
+    key = hash_f64(key, config.weights.stability);
+    key = hash_f64(key, config.weights.time_period);
+    key = hash_f64(key, config.weights.performance);
+    key = hash_f64(key, config.stability_weights.connectivity);
+    key = hash_f64(key, config.stability_weights.packet_loss);
+    key = hash_f64(key, config.stability_weights.consecutive_failure);
+    key = hash_f64(key, config.time_period_weights.day);
+    key = hash_f64(key, config.time_period_weights.night);
+    key = hash_f64(key, config.performance_weights.avg_latency);
+    key = hash_f64(key, config.performance_weights.p95_latency);
+    key = hash_f64(key, config.performance_weights.jitter);
+    key = hash_f64(key, config.performance_weights.tcp_connect_latency);
+    key = hash_f64(key, config.performance_weights.traceroute_hops);
+
+    let key = candidates
+        .iter()
+        .fold(key, |hash, candidate| hash_candidate(hash, candidate));
+
+    std::env::temp_dir().join(format!("vps-selector-history-{key:016x}.json"))
+}
+
+fn hash_candidate(mut hash: u64, candidate: &(String, String, Vec<u16>)) -> u64 {
+    hash = hash_str(hash, &candidate.0);
+    hash = hash_str(hash, &candidate.1);
+    for port in &candidate.2 {
+        for byte in port.to_be_bytes() {
+            hash = fnv1a_update(hash, byte);
+        }
+        hash = fnv1a_update(hash, 0);
+    }
+    hash
+}
+
+fn hash_str(mut hash: u64, value: &str) -> u64 {
+    for byte in value.as_bytes() {
+        hash = fnv1a_update(hash, *byte);
+    }
+    fnv1a_update(hash, 0)
+}
+
+fn hash_f64(mut hash: u64, value: f64) -> u64 {
+    for byte in value.to_be_bytes() {
+        hash = fnv1a_update(hash, byte);
+    }
+    hash
+}
+
+fn fnv1a_update(hash: u64, byte: u8) -> u64 {
+    (hash ^ byte as u64).wrapping_mul(0x100000001b3)
+}
+
 async fn probe_target(
     target: &Target,
     default_ports: &[u16],
@@ -103,7 +193,9 @@ async fn probe_target(
     for sample_index in 0..sample_count {
         let (traceroute_hops, traceroute_errors) = traceroute_result
             .take()
-            .map(|result| result.unwrap_or_else(|error| (None, vec![format!("路由追踪失败：{error}")])))
+            .map(|result| {
+                result.unwrap_or_else(|error| (None, vec![format!("路由追踪失败：{error}")]))
+            })
             .unwrap_or_default();
         let sample = match probe_sample(
             target,
@@ -130,7 +222,12 @@ async fn probe_target(
         tokio::time::sleep(sleep_duration).await;
     }
 
-    Ok(aggregate_metrics(&target.ip, &target.city, test_period, &samples))
+    Ok(aggregate_metrics(
+        &target.ip,
+        &target.city,
+        test_period,
+        &samples,
+    ))
 }
 
 fn calculate_sample_count(duration: Duration, interval: Duration) -> u64 {
@@ -172,11 +269,9 @@ async fn probe_sample(
 ) -> Result<ProbeSample, AppError> {
     let ip = target.ip.clone();
     let ping_timeout_ms = tcp_timeout_ms;
-    let ping_result = tokio::task::spawn_blocking(move || {
-        run_ping_once(&ip, ping_timeout_ms)
-    })
-    .await
-    .map_err(|error| AppError::Probe(format!("ICMP 探测任务执行失败：{error}")))?;
+    let ping_result = tokio::task::spawn_blocking(move || run_ping_once(&ip, ping_timeout_ms))
+        .await
+        .map_err(|error| AppError::Probe(format!("ICMP 探测任务执行失败：{error}")))?;
     let (icmp_latency_ms, icmp_success, ping_errors) = match ping_result {
         Ok(result) => result,
         Err(error) => (None, false, vec![format!("ICMP 探测失败：{error}")]),
@@ -244,12 +339,18 @@ mod tests {
 
     #[test]
     fn calculates_sample_count_for_short_test_config() {
-        assert_eq!(calculate_sample_count(Duration::from_millis(250), Duration::from_millis(100)), 3);
+        assert_eq!(
+            calculate_sample_count(Duration::from_millis(250), Duration::from_millis(100)),
+            3
+        );
     }
 
     #[test]
     fn calculates_at_least_one_sample_for_zero_duration() {
-        assert_eq!(calculate_sample_count(Duration::ZERO, Duration::from_millis(100)), 1);
+        assert_eq!(
+            calculate_sample_count(Duration::ZERO, Duration::from_millis(100)),
+            1
+        );
     }
 
     #[test]
@@ -262,7 +363,10 @@ mod tests {
 
     #[test]
     fn next_sleep_duration_exits_when_time_has_expired() {
-        assert_eq!(next_sleep_duration(Duration::ZERO, Duration::from_millis(100)), None);
+        assert_eq!(
+            next_sleep_duration(Duration::ZERO, Duration::from_millis(100)),
+            None
+        );
     }
 
     #[test]
@@ -277,9 +381,16 @@ mod tests {
         let metrics = aggregate_metrics(&target.ip, &target.city, "白天", &[sample.clone()]);
 
         assert!(!sample.icmp_success);
-        assert_eq!(sample.errors, vec!["目标探测失败：ping 命令不可用".to_string()]);
-        assert!(metrics.missing_indicators.contains(&"ICMP 缺失".to_string()));
+        assert_eq!(
+            sample.errors,
+            vec!["目标探测失败：ping 命令不可用".to_string()]
+        );
+        assert!(metrics
+            .missing_indicators
+            .contains(&"ICMP 缺失".to_string()));
         assert!(metrics.missing_indicators.contains(&"TCP 缺失".to_string()));
-        assert!(metrics.missing_indicators.contains(&"路由追踪缺失".to_string()));
+        assert!(metrics
+            .missing_indicators
+            .contains(&"路由追踪缺失".to_string()));
     }
 }

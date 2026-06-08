@@ -50,3 +50,10 @@ pub struct TargetScore {
     pub confidence: String,
     pub reasons: Vec<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComprehensiveRanking {
+    pub metrics: Vec<TargetMetrics>,
+    pub scores: Vec<TargetScore>,
+    pub ranking_basis: String,
+}

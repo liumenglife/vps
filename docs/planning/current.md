@@ -53,6 +53,11 @@
 - Task 9 自动验证已完成：Rust 测试、Rust 编译、前端构建均通过。
 - 已创建验证报告：`docs/reports/verification/101-vps-route-selection-mvp-verification.md`。
 - `cargo-tauri` 已安装并复核为真实二进制，`cargo tauri dev` 已完成 GUI 启动验收。
+- 业务 E2E 已完成：中文 TOML 三地真实候选 IP 配置解析、探测调度、指标评分、Markdown 报告生成链路通过 `business_e2e_test` 验证。
+- GUI 页面已改用 Playwright CLI 验证：配置页可达、三地真实候选 IP 可见、核心按钮可见、控制台无错误。
+- 已修复真实公网 E2E 卡死风险：`traceroute` 增加等待与最大跳数边界，并有回归测试覆盖。
+- 已修复手动验收反馈：测试中页面展示北京时间、判定时段、候选 IP 和探测阶段；Markdown 导出改用 Tauri 原生保存；排名按北京时间和历史缓存支持单时段/白天晚上交叉验证综合排名。
+- 本轮已按 `编码+测试 -> code review -> 修复 -> QA` 循环完成算法、导出、测试中细节三个功能点。
 
 ## 11. 当前阻塞
 - 无。
@@ -61,7 +66,7 @@
 - 无。
 
 ## 13. 下一步唯一动作
-- 提交最终验证报告和 planning 状态，然后进入分支收尾。
+- 提交最终验证报告、planning 状态和本轮修复，然后进入分支收尾。
 
 ## 14. 恢复提示
 - Session 恢复时，请检查此文件的状态，并沿着“当前阶段”与“下一步唯一动作”继续推进。

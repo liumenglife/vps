@@ -120,7 +120,10 @@ pub fn validate_config(config: &AppConfig) -> Result<(), AppError> {
     )?;
     validate_weight_sum(
         "分时段权重",
-        &[config.time_period_weights.day, config.time_period_weights.night],
+        &[
+            config.time_period_weights.day,
+            config.time_period_weights.night,
+        ],
     )?;
     validate_weight_sum(
         "性能权重",

@@ -1,6 +1,4 @@
-use vps_selector::probe::{
-    parse_ping_avg_latency, parse_ping_packet_loss, parse_traceroute_hops,
-};
+use vps_selector::probe::{parse_ping_avg_latency, parse_ping_packet_loss, parse_traceroute_hops};
 
 #[test]
 fn parses_macos_ping_latency() {

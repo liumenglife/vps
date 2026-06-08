@@ -94,4 +94,7 @@
 - [✓] 前端构建通过：`npm run build`。
 - [✓] 安装并复核真实 `cargo-tauri` Cargo 子命令：`cargo tauri --version` 输出 `tauri-cli 2.11.2`。
 - [✓] `cargo tauri dev` 可进入启动流程，用户终端已成功打开 GUI。
+- [✓] 新增并通过业务 E2E：中文 TOML 三地真实候选 IP → 探测调度 → metrics/scores → Markdown 报告。
+- [✓] 修复真实公网 E2E 卡死风险：`traceroute` 增加等待与最大跳数边界，并有回归测试覆盖。
+- [✓] 完成 Playwright CLI 本机 Chrome GUI 验证：页面可达、三地真实候选 IP 可见、核心控件可见、控制台无错误。
 - [✓] 创建并更新验证报告：`docs/reports/verification/101-vps-route-selection-mvp-verification.md`。

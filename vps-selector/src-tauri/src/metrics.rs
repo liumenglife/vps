@@ -11,9 +11,17 @@ pub fn aggregate_metrics(
     let icmp_failures = samples.iter().filter(|sample| !sample.icmp_success).count();
     let icmp_latencies: Vec<f64> = samples
         .iter()
-        .filter_map(|sample| sample.icmp_success.then_some(sample.icmp_latency_ms).flatten())
+        .filter_map(|sample| {
+            sample
+                .icmp_success
+                .then_some(sample.icmp_latency_ms)
+                .flatten()
+        })
         .collect();
-    let tcp_total = samples.iter().map(|sample| sample.tcp_results.len()).sum::<usize>();
+    let tcp_total = samples
+        .iter()
+        .map(|sample| sample.tcp_results.len())
+        .sum::<usize>();
     let tcp_success_latencies: Vec<f64> = samples
         .iter()
         .flat_map(|sample| sample.tcp_results.iter())
@@ -38,7 +46,8 @@ pub fn aggregate_metrics(
     let consecutive_failures = samples
         .iter()
         .fold((0_u32, 0_u32), |(max_failures, current), sample| {
-            let connected = sample.icmp_success || sample.tcp_results.iter().any(|result| result.success);
+            let connected =
+                sample.icmp_success || sample.tcp_results.iter().any(|result| result.success);
             if connected {
                 (max_failures, 0)
             } else {
@@ -94,6 +103,9 @@ fn percentile_95(values: &[f64]) -> Option<f64> {
 }
 
 fn jitter(values: &[f64]) -> Option<f64> {
-    let diffs: Vec<f64> = values.windows(2).map(|pair| (pair[1] - pair[0]).abs()).collect();
+    let diffs: Vec<f64> = values
+        .windows(2)
+        .map(|pair| (pair[1] - pair[0]).abs())
+        .collect();
     average(&diffs)
 }

@@ -190,6 +190,77 @@ textarea:focus {
   padding: 22px;
 }
 
+.test-layout {
+  display: grid;
+  gap: 20px;
+}
+
+.test-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+  gap: 20px;
+  align-items: center;
+}
+
+.probe-details {
+  display: grid;
+  gap: 18px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-card,
+.detail-card {
+  border: 1px solid rgba(120, 255, 215, 0.16);
+  border-radius: 18px;
+  background: rgba(7, 20, 18, 0.74);
+}
+
+.metric-card {
+  padding: 16px;
+}
+
+.metric-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: #51f0c2;
+  font-size: 0.78rem;
+}
+
+.metric-card strong {
+  color: #f1fff9;
+  font-size: 1.05rem;
+}
+
+.detail-card {
+  padding: 18px;
+}
+
+.phase-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.phase-list li {
+  color: #d6e4df;
+  line-height: 1.6;
+}
+
+.phase-list strong {
+  margin-right: 10px;
+  color: #51f0c2;
+}
+
+.phase-list span {
+  color: #90a9a1;
+}
+
 .button-stack,
 .button-row {
   display: flex;
@@ -321,7 +392,12 @@ code {
 
   .hero-panel,
   .workspace-grid,
-  .result-layout {
+  .result-layout,
+  .test-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-grid {
     grid-template-columns: 1fr;
   }
 

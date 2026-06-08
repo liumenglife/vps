@@ -90,7 +90,7 @@ fn missing_icmp_but_tcp_available_is_low_confidence() {
 }
 
 #[test]
-fn day_and_night_test_periods_add_incomplete_period_sample_reason() {
+fn day_and_night_test_periods_do_not_add_incomplete_period_sample_reason() {
     let config = parse_config(include_str!("fixtures/valid-config.toml")).unwrap();
 
     for test_period in ["白天", "晚上"] {
@@ -114,8 +114,8 @@ fn day_and_night_test_periods_add_incomplete_period_sample_reason() {
         let score = score_target(&config, &metrics);
 
         assert!(
-            score.reasons.contains(&"分时段样本不完整".into()),
-            "test_period {test_period} should add incomplete period sample reason"
+            !score.reasons.contains(&"分时段样本不完整".into()),
+            "test_period {test_period} should not add incomplete period sample reason"
         );
     }
 }

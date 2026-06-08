@@ -18,8 +18,14 @@ pub fn parse_ping_packet_loss(output: &str) -> Option<f64> {
     output.lines().find_map(|line| {
         let packet_loss = line.find("% packet loss")?;
         let before_percent = &line[..packet_loss];
-        let value = before_percent.rsplit_once(' ').map_or(before_percent, |(_, value)| value);
-        value.trim().parse::<f64>().ok().map(|percent| percent / 100.0)
+        let value = before_percent
+            .rsplit_once(' ')
+            .map_or(before_percent, |(_, value)| value);
+        value
+            .trim()
+            .parse::<f64>()
+            .ok()
+            .map(|percent| percent / 100.0)
     })
 }
 
@@ -85,12 +91,18 @@ pub fn run_ping_once(
 }
 
 pub fn run_traceroute_once(ip: &str) -> Result<(Option<u32>, Vec<String>), AppError> {
-    let output = Command::new("traceroute").arg(ip).output()?;
+    let output = Command::new("traceroute")
+        .args(traceroute_args(ip))
+        .output()?;
     let text = command_text(&output);
     let hops = parse_traceroute_hops(&text);
     let errors = command_errors(&output, "traceroute");
 
     Ok((hops, errors))
+}
+
+fn traceroute_args(ip: &str) -> Vec<&str> {
+    vec!["-w", "1", "-m", "8", ip]
 }
 
 fn command_text(output: &std::process::Output) -> String {
@@ -114,7 +126,7 @@ fn command_errors(output: &std::process::Output, command: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::command_errors;
+    use super::{command_errors, traceroute_args};
     use std::process::{ExitStatus, Output};
 
     #[cfg(unix)]
@@ -135,6 +147,14 @@ mod tests {
         assert_eq!(
             command_errors(&output, "ping"),
             vec!["ping 命令执行失败：unknown host".to_string()]
+        );
+    }
+
+    #[test]
+    fn traceroute_args_bound_wait_time_and_hop_count() {
+        assert_eq!(
+            traceroute_args("192.3.81.8"),
+            vec!["-w", "1", "-m", "8", "192.3.81.8"]
         );
     }
 }
