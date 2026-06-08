@@ -68,6 +68,8 @@ pub struct TimePeriodWeights {
     pub day: f64,
     #[serde(rename = "晚上")]
     pub night: f64,
+    #[serde(rename = "其他")]
+    pub other: f64,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -123,6 +125,7 @@ pub fn validate_config(config: &AppConfig) -> Result<(), AppError> {
         &[
             config.time_period_weights.day,
             config.time_period_weights.night,
+            config.time_period_weights.other,
         ],
     )?;
     validate_weight_sum(

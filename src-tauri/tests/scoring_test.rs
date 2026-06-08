@@ -105,9 +105,7 @@ fn adds_reasons_for_stability_penalties() {
 
     let score = score_target(&config, &metrics);
 
-    assert!(score
-        .reasons
-        .contains(&"连续失败 4 次，稳定性重罚".into()));
+    assert!(score.reasons.contains(&"连续失败 4 次，稳定性重罚".into()));
     assert!(score
         .reasons
         .contains(&"丢包率 12.50%，线路质量严重不稳".into()));
@@ -220,6 +218,28 @@ fn missing_icmp_but_tcp_available_is_low_confidence() {
     let score = score_target(&config, &metrics);
 
     assert_eq!(score.confidence, "低");
+}
+
+#[test]
+fn time_period_score_uses_day_night_other_weights_and_unknown_defaults_to_other() {
+    let config = parse_config(include_str!("fixtures/valid-config.toml")).unwrap();
+
+    for (test_period, expected_score) in [
+        ("白天", 50.0),
+        ("晚上", 30.0),
+        ("其他", 20.0),
+        ("凌晨", 20.0),
+    ] {
+        let mut metrics = stable_metrics();
+        metrics.test_period = test_period.into();
+
+        let score = score_target(&config, &metrics);
+
+        assert_eq!(
+            score.time_period_score, expected_score,
+            "test_period {test_period}"
+        );
+    }
 }
 
 #[test]

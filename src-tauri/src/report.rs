@@ -106,8 +106,12 @@ pub fn generate_markdown_report(
     report.push_str("### 分时段权重\n\n");
     report.push_str(&format!("- 白天：{:.2}\n", config.time_period_weights.day));
     report.push_str(&format!(
-        "- 晚上：{:.2}\n\n",
+        "- 晚上：{:.2}\n",
         config.time_period_weights.night
+    ));
+    report.push_str(&format!(
+        "- 其他：{:.2}\n\n",
+        config.time_period_weights.other
     ));
     report.push_str("### 性能权重\n\n");
     report.push_str(&format!(
