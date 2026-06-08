@@ -20,22 +20,20 @@ test('配置页展示真实候选 IP 并提供可操作入口', async ({ page })
   await expect.poll(() => consoleErrors).toEqual([]);
 });
 
-test('测试中页面展示可解析的配置细节', async ({ page }) => {
+test('测试中页面展示实时探测日志并移除静态阶段说明', async ({ page }) => {
   await page.goto('/');
 
   await page.getByRole('button', { name: '立即开始测试' }).click();
 
   await expect(page.getByRole('heading', { name: '测试中' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '实时探测日志' })).toBeVisible();
+  await expect(page.getByText('等待 Tauri 探测日志通道')).toBeVisible();
   await expect(page.getByText('北京时间')).toBeVisible();
   await expect(page.getByText('判定时段')).toBeVisible();
   await expect(page.getByText('候选 IP 数量')).toBeVisible();
   await expect(page.getByText('3 个')).toBeVisible();
-  await expect(page.getByText('192.3.81.8')).toBeVisible();
-  await expect(page.getByText('107.174.51.158')).toBeVisible();
-  await expect(page.getByText('198.23.228.15')).toBeVisible();
   await expect(page.getByText('默认端口')).toBeVisible();
   await expect(page.locator('.metric-card').filter({ hasText: '默认端口' }).getByText('22, 80, 443')).toBeVisible();
-  await expect(page.getByRole('row', { name: /107\.174\.51\.158.*22, 443/ })).toBeVisible();
   await expect(page.getByText('预计测试分钟数')).toBeVisible();
   await expect(page.getByText('10 分钟')).toBeVisible();
   await expect(page.getByText('ICMP 间隔')).toBeVisible();
@@ -44,9 +42,74 @@ test('测试中页面展示可解析的配置细节', async ({ page }) => {
   await expect(page.getByText('3000 ms')).toBeVisible();
   await expect(page.getByText('并发数')).toBeVisible();
   await expect(page.getByText('4', { exact: true })).toBeVisible();
-  await expect(page.getByText('路由追踪')).toBeVisible();
-  await expect(page.getByText('ICMP', { exact: true })).toBeVisible();
-  await expect(page.getByText('TCP', { exact: true })).toBeVisible();
+  await expect(page.getByText('阶段说明')).toHaveCount(0);
+});
+
+test('测试中页面等待 probe-log 监听完成后启动探测并清理监听', async ({ page }) => {
+  await page.goto('/');
+  const config = await page.getByLabel('中文 TOML 配置').inputValue();
+
+  await page.evaluate(async (configText) => {
+    const { renderTestPage } = await import('/src/pages/test-page.ts');
+    const root = document.querySelector<HTMLElement>('.app-shell');
+    if (!root) {
+      throw new Error('missing app root');
+    }
+
+    let resolveListen: (() => void) | undefined;
+    const state = {
+      callback: undefined as undefined | ((event: { payload: string }) => void),
+      started: false,
+      unlistened: false,
+    };
+    Object.assign(window, { __probeLogTestState: state });
+
+    const cleanup = renderTestPage(
+      root,
+      {
+        state: {
+          configText,
+          reportMarkdown: '',
+          errorMessage: '',
+        },
+        setConfigText() {},
+        setReportMarkdown() {},
+        setErrorMessage() {},
+        navigate() {},
+      },
+      {
+        listenProbeLog(handler: (event: { payload: string }) => void) {
+          state.callback = handler;
+          return new Promise<() => void>((resolve) => {
+            resolveListen = () => resolve(() => {
+              state.unlistened = true;
+            });
+          });
+        },
+        startProbe() {
+          state.started = true;
+          return new Promise<string>(() => {});
+        },
+      },
+    );
+
+    await Promise.resolve();
+    if (state.started) {
+      throw new Error('startProbe ran before probe-log listener was installed');
+    }
+
+    resolveListen?.();
+    await Promise.resolve();
+    await Promise.resolve();
+    state.callback?.({ payload: '[probe] start 192.3.81.8' });
+    state.callback?.({ payload: '[icmp] 192.3.81.8 ok latency=12ms' });
+    cleanup();
+  }, config);
+
+  await expect(page.getByRole('log')).toContainText('[probe] start 192.3.81.8');
+  await expect(page.getByRole('log')).toContainText('[icmp] 192.3.81.8 ok latency=12ms');
+  await expect.poll(async () => page.evaluate(() => window.__probeLogTestState.started)).toBe(true);
+  await expect.poll(async () => page.evaluate(() => window.__probeLogTestState.unlistened)).toBe(true);
 });
 
 test('测试中页面在非白天非晚上时按北京时间展示其他时段', async ({ page }) => {

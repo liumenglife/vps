@@ -240,25 +240,23 @@ textarea:focus {
   padding: 18px;
 }
 
-.phase-list {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding-left: 22px;
+.probe-log-card h2 {
+  margin-bottom: 12px;
 }
 
-.phase-list li {
-  color: #d6e4df;
-  line-height: 1.6;
-}
-
-.phase-list strong {
-  margin-right: 10px;
-  color: #51f0c2;
-}
-
-.phase-list span {
-  color: #90a9a1;
+.probe-log {
+  min-height: 320px;
+  max-height: 52vh;
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid rgba(120, 255, 215, 0.14);
+  border-radius: 14px;
+  color: #dffaf1;
+  background: #04100e;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
 }
 
 .button-stack,

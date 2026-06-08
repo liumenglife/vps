@@ -19,6 +19,23 @@ type TestConfigDetails = {
   candidates: CandidateIp[];
 };
 
+type ProbeLogEvent = {
+  payload: string;
+};
+
+type TestPageDeps = {
+  listenProbeLog: (handler: (event: ProbeLogEvent) => void) => Promise<() => void>;
+  startProbe: (content: string) => Promise<string>;
+};
+
+const defaultTestPageDeps: TestPageDeps = {
+  async listenProbeLog(handler) {
+    const { listen } = await import('@tauri-apps/api/event');
+    return listen<string>('probe-log', handler);
+  },
+  startProbe,
+};
+
 function parseChineseTomlDetails(configText: string): TestConfigDetails {
   const defaultPorts = readNumberArray(configText, '默认端口');
   const dayWindow = readStringValue(configText, '白天时段');
@@ -167,44 +184,32 @@ function renderDetails(details: TestConfigDetails) {
           )
           .join('')}
       </div>
-      <section class="detail-card">
-        <h2>候选 IP 列表</h2>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr><th>IP</th><th>城市</th><th>有效端口</th></tr>
-            </thead>
-            <tbody>
-              ${details.candidates
-                .map(
-                  (candidate) => `
-                    <tr>
-                      <td><code>${escapeHtml(candidate.ip)}</code></td>
-                      <td>${escapeHtml(candidate.city)}</td>
-                      <td>${escapeHtml(candidate.ports.join(', '))}</td>
-                    </tr>
-                  `,
-                )
-                .join('')}
-            </tbody>
-          </table>
-        </div>
-      </section>
-      <section class="detail-card">
-        <h2>阶段说明</h2>
-        <ol class="phase-list">
-          <li><strong>解析配置</strong><span>读取中文 TOML，识别时段、端口、候选 IP 和测试参数。</span></li>
-          <li><strong>路由追踪</strong><span>采集候选线路跳数，作为评分报告的一部分。</span></li>
-          <li><strong>ICMP</strong><span>按配置间隔持续探测延迟、丢包和抖动。</span></li>
-          <li><strong>TCP</strong><span>按有效端口尝试连接并记录连接耗时与可用性。</span></li>
-          <li><strong>评分报告</strong><span>当前版本按后端一次性任务执行，完成后自动进入结果页。</span></li>
-        </ol>
-      </section>
     </section>
   `;
 }
 
-export function renderTestPage(root: HTMLElement, controller: AppController) {
+async function subscribeProbeLog(logBox: HTMLElement, listenProbeLog: TestPageDeps['listenProbeLog']) {
+  try {
+    const unlisten = await listenProbeLog((event) => {
+      appendProbeLog(logBox, String(event.payload));
+    });
+
+    logBox.textContent = '';
+    return unlisten;
+  } catch {
+    logBox.textContent = '等待 Tauri 探测日志通道';
+    return undefined;
+  }
+}
+
+function appendProbeLog(logBox: HTMLElement, message: string) {
+  const line = document.createElement('div');
+  line.textContent = message;
+  logBox.append(line);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+export function renderTestPage(root: HTMLElement, controller: AppController, deps: TestPageDeps = defaultTestPageDeps) {
   let detailsHtml = '<p class="feedback is-error" role="alert">配置细节解析失败，请返回配置检查</p>';
 
   try {
@@ -224,6 +229,10 @@ export function renderTestPage(root: HTMLElement, controller: AppController) {
         <div class="scanner" aria-hidden="true"><span></span></div>
       </header>
       ${detailsHtml}
+      <section class="detail-card probe-log-card" aria-label="实时探测日志">
+        <h2>实时探测日志</h2>
+        <div id="probe-log" class="probe-log" role="log" aria-live="polite">等待 Tauri 探测日志通道</div>
+      </section>
       <p id="test-error" class="feedback is-error" role="alert"></p>
       <button id="back-config" type="button" class="secondary-button">返回配置</button>
     </section>
@@ -231,13 +240,41 @@ export function renderTestPage(root: HTMLElement, controller: AppController) {
 
   const errorBox = root.querySelector<HTMLElement>('#test-error');
   const backButton = root.querySelector<HTMLButtonElement>('#back-config');
+  const logBox = root.querySelector<HTMLElement>('#probe-log');
+  let disposed = false;
+  let unlistenProbeLog: (() => void) | undefined;
+
+  const cleanupProbeLog = () => {
+    if (!unlistenProbeLog) {
+      return;
+    }
+
+    const unlisten = unlistenProbeLog;
+    unlistenProbeLog = undefined;
+    unlisten();
+  };
 
   backButton?.addEventListener('click', () => {
     controller.navigate('config');
   });
 
-  void startProbe(controller.state.configText)
+  void (async () => {
+    if (logBox) {
+      unlistenProbeLog = await subscribeProbeLog(logBox, deps.listenProbeLog);
+    }
+
+    if (disposed) {
+      cleanupProbeLog();
+      return;
+    }
+
+    return deps.startProbe(controller.state.configText);
+  })()
     .then((report) => {
+      if (!report || disposed) {
+        return;
+      }
+
       controller.setReportMarkdown(report);
       controller.setErrorMessage('');
       controller.navigate('result');
@@ -248,5 +285,13 @@ export function renderTestPage(root: HTMLElement, controller: AppController) {
       if (errorBox) {
         errorBox.textContent = message;
       }
+    })
+    .finally(() => {
+      cleanupProbeLog();
     });
+
+  return () => {
+    disposed = true;
+    cleanupProbeLog();
+  };
 }

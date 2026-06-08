@@ -15,8 +15,17 @@ use crate::models::{ComprehensiveRanking, ProbeSample, TargetMetrics, TargetScor
 use crate::probe::{run_ping_once, run_traceroute_once, tcp_connect};
 use crate::report::{build_comprehensive_ranking, generate_markdown_report};
 
+pub type ProbeLogSink = Arc<dyn Fn(String) + Send + Sync + 'static>;
+
 pub async fn run_probe_once(
     config: &AppConfig,
+) -> Result<(Vec<TargetMetrics>, Vec<TargetScore>, String), AppError> {
+    run_probe_once_with_logger(config, None).await
+}
+
+pub async fn run_probe_once_with_logger(
+    config: &AppConfig,
+    logger: Option<ProbeLogSink>,
 ) -> Result<(Vec<TargetMetrics>, Vec<TargetScore>, String), AppError> {
     let now = Utc::now();
     let test_period =
@@ -34,13 +43,20 @@ pub async fn run_probe_once(
         let default_ports = config.ports.default_ports.clone();
         let probe_settings = config.probe.clone();
         let target_period = test_period.clone();
+        let target_logger = logger.clone();
 
         tasks.push((
             fallback_target,
             target_period.clone(),
             tokio::spawn(async move {
                 let _permit = permit;
-                probe_target(&target, &default_ports, &probe_settings, &target_period)
+                probe_target(
+                    &target,
+                    &default_ports,
+                    &probe_settings,
+                    &target_period,
+                    target_logger.as_deref(),
+                )
                     .await
                     .unwrap_or_else(|error| {
                         let sample = failed_probe_sample(&target, format!("目标探测失败：{error}"));
@@ -181,28 +197,40 @@ async fn probe_target(
     default_ports: &[u16],
     settings: &crate::config::ProbeSettings,
     test_period: &str,
+    logger: Option<&(dyn Fn(String) + Send + Sync + 'static)>,
 ) -> Result<TargetMetrics, AppError> {
     let ports = target.ports.as_deref().unwrap_or(default_ports).to_vec();
     let duration = Duration::from_secs(settings.default_duration_minutes * 60);
     let interval = Duration::from_millis(settings.icmp_interval_ms);
     let started_at = Instant::now();
     let mut samples = Vec::new();
+    emit_probe_log(logger, format_probe_start_log(&target.ip, &target.city));
+    emit_probe_log(logger, format_traceroute_start_log(&target.ip));
     let mut traceroute_result = Some(run_traceroute(&target.ip).await);
     let sample_count = calculate_sample_count(duration, interval);
 
     for sample_index in 0..sample_count {
+        let sample_number = sample_index + 1;
         let (traceroute_hops, traceroute_errors) = traceroute_result
             .take()
             .map(|result| {
                 result.unwrap_or_else(|error| (None, vec![format!("路由追踪失败：{error}")]))
             })
             .unwrap_or_default();
+        if sample_index == 0 {
+            emit_probe_log(
+                logger,
+                format_traceroute_result_log(&target.ip, traceroute_hops, &traceroute_errors),
+            );
+        }
         let sample = match probe_sample(
             target,
             &ports,
             settings.tcp_timeout_ms,
             traceroute_hops,
             traceroute_errors,
+            sample_number,
+            logger,
         )
         .await
         {
@@ -222,12 +250,23 @@ async fn probe_target(
         tokio::time::sleep(sleep_duration).await;
     }
 
-    Ok(aggregate_metrics(
+    let metrics = aggregate_metrics(
         &target.ip,
         &target.city,
         test_period,
         &samples,
-    ))
+    );
+    emit_probe_log(
+        logger,
+        format_target_complete_log(
+            &target.ip,
+            metrics.sample_count,
+            metrics.connectivity_rate,
+            metrics.tcp_success_rate,
+        ),
+    );
+
+    Ok(metrics)
 }
 
 fn calculate_sample_count(duration: Duration, interval: Duration) -> u64 {
@@ -266,6 +305,8 @@ async fn probe_sample(
     tcp_timeout_ms: u64,
     traceroute_hops: Option<u32>,
     mut errors: Vec<String>,
+    sample_number: u64,
+    logger: Option<&(dyn Fn(String) + Send + Sync + 'static)>,
 ) -> Result<ProbeSample, AppError> {
     let ip = target.ip.clone();
     let ping_timeout_ms = tcp_timeout_ms;
@@ -277,6 +318,16 @@ async fn probe_sample(
         Err(error) => (None, false, vec![format!("ICMP 探测失败：{error}")]),
     };
     errors.extend(ping_errors);
+    emit_probe_log(
+        logger,
+        format_icmp_sample_log(
+            &target.ip,
+            sample_number,
+            icmp_success,
+            icmp_latency_ms,
+            &errors,
+        ),
+    );
 
     let mut tcp_results = Vec::with_capacity(ports.len());
     for port in ports.iter().copied() {
@@ -287,6 +338,7 @@ async fn probe_sample(
         if let Some(error) = &result.error {
             errors.push(format!("TCP {port} 失败：{error}"));
         }
+        emit_probe_log(logger, format_tcp_result_log(&target.ip, &result));
         tcp_results.push(result);
     }
 
@@ -300,6 +352,89 @@ async fn probe_sample(
         traceroute_hops,
         errors,
     })
+}
+
+fn emit_probe_log(logger: Option<&(dyn Fn(String) + Send + Sync + 'static)>, message: String) {
+    if let Some(logger) = logger {
+        logger(message);
+    }
+}
+
+pub fn format_probe_start_log(ip: &str, city: &str) -> String {
+    format!("[probe] start ip={ip} city={city}")
+}
+
+pub fn format_traceroute_start_log(ip: &str) -> String {
+    format!("[traceroute] start ip={ip}")
+}
+
+pub fn format_traceroute_result_log(ip: &str, hops: Option<u32>, errors: &[String]) -> String {
+    match hops {
+        Some(hops) => format!("[traceroute] done ip={ip} hops={hops}"),
+        None => format!(
+            "[traceroute] failed ip={ip} error={}",
+            first_error(errors)
+        ),
+    }
+}
+
+pub fn format_icmp_sample_log(
+    ip: &str,
+    sample_number: u64,
+    success: bool,
+    latency_ms: Option<f64>,
+    errors: &[String],
+) -> String {
+    if success {
+        format!(
+            "[ping] sample={sample_number} ip={ip} success latency={:.2}ms loss=0%",
+            latency_ms.unwrap_or_default()
+        )
+    } else {
+        format!(
+            "[ping] sample={sample_number} ip={ip} failed loss=100% error={}",
+            first_error(errors)
+        )
+    }
+}
+
+pub fn format_tcp_result_log(ip: &str, result: &crate::models::TcpProbeResult) -> String {
+    if result.success {
+        format!(
+            "[tcp] ip={ip} port={} success time={:.2}ms",
+            result.port,
+            result.latency_ms.unwrap_or_default()
+        )
+    } else {
+        format!(
+            "[tcp] ip={ip} port={} failed error={}",
+            result.port,
+            result.error.as_deref().unwrap_or("unknown error")
+        )
+    }
+}
+
+pub fn format_target_complete_log(
+    ip: &str,
+    sample_count: usize,
+    connectivity_rate: Option<f64>,
+    tcp_success_rate: Option<f64>,
+) -> String {
+    format!(
+        "[probe] done ip={ip} samples={sample_count} connectivity={} tcp_success={}",
+        format_percent(connectivity_rate),
+        format_percent(tcp_success_rate)
+    )
+}
+
+fn format_percent(value: Option<f64>) -> String {
+    value
+        .map(|value| format!("{:.2}%", value * 100.0))
+        .unwrap_or_else(|| "n/a".into())
+}
+
+fn first_error(errors: &[String]) -> &str {
+    errors.first().map(String::as_str).unwrap_or("unknown error")
 }
 
 async fn run_traceroute(ip: &str) -> Result<(Option<u32>, Vec<String>), AppError> {
@@ -336,6 +471,7 @@ fn parse_hhmm(value: &str) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::TcpProbeResult;
 
     #[test]
     fn calculates_sample_count_for_short_test_config() {
@@ -392,5 +528,53 @@ mod tests {
         assert!(metrics
             .missing_indicators
             .contains(&"路由追踪缺失".to_string()));
+    }
+
+    #[test]
+    fn formats_probe_log_lines_like_command_output() {
+        assert_eq!(
+            format_probe_start_log("192.0.2.10", "东京"),
+            "[probe] start ip=192.0.2.10 city=东京"
+        );
+        assert_eq!(
+            format_traceroute_start_log("192.0.2.10"),
+            "[traceroute] start ip=192.0.2.10"
+        );
+        assert_eq!(
+            format_traceroute_result_log("192.0.2.10", Some(7), &[]),
+            "[traceroute] done ip=192.0.2.10 hops=7"
+        );
+        assert_eq!(
+            format_traceroute_result_log("192.0.2.10", None, &["timeout".to_string()]),
+            "[traceroute] failed ip=192.0.2.10 error=timeout"
+        );
+    }
+
+    #[test]
+    fn formats_probe_log_lines_for_icmp_tcp_and_completion() {
+        assert_eq!(
+            format_icmp_sample_log("192.0.2.10", 2, true, Some(18.42), &[]),
+            "[ping] sample=2 ip=192.0.2.10 success latency=18.42ms loss=0%"
+        );
+        assert_eq!(
+            format_icmp_sample_log("192.0.2.10", 3, false, None, &["request timeout".to_string()]),
+            "[ping] sample=3 ip=192.0.2.10 failed loss=100% error=request timeout"
+        );
+        assert_eq!(
+            format_tcp_result_log(
+                "192.0.2.10",
+                &TcpProbeResult {
+                    port: 443,
+                    success: true,
+                    latency_ms: Some(31.5),
+                    error: None,
+                },
+            ),
+            "[tcp] ip=192.0.2.10 port=443 success time=31.50ms"
+        );
+        assert_eq!(
+            format_target_complete_log("192.0.2.10", 5, Some(0.8), Some(0.67)),
+            "[probe] done ip=192.0.2.10 samples=5 connectivity=80.00% tcp_success=67.00%"
+        );
     }
 }

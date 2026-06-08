@@ -67,6 +67,7 @@ const sampleConfig = `["探测设置"]
 
 export function createApp(root: HTMLElement): AppController {
   let route: Route = 'config';
+  let cleanupRoute: (() => void) | undefined;
 
   const state: AppState = {
     configText: sampleConfig,
@@ -92,6 +93,8 @@ export function createApp(root: HTMLElement): AppController {
   };
 
   function render() {
+    cleanupRoute?.();
+    cleanupRoute = undefined;
     root.innerHTML = '';
     root.className = 'app-shell';
 
@@ -105,7 +108,7 @@ export function createApp(root: HTMLElement): AppController {
     }
 
     if (route === 'test') {
-      renderTestPage(frame, controller);
+      cleanupRoute = renderTestPage(frame, controller);
       return;
     }
 
