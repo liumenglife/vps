@@ -11,9 +11,9 @@ pub fn score_target(config: &AppConfig, metrics: &TargetMetrics) -> TargetScore 
         .unwrap_or(0.0);
     let consecutive_failure = 1.0 - (metrics.consecutive_failures as f64 / 10.0).min(1.0);
     let stability_score = 100.0
-        * (connectivity * config.stability_weights.connectivity
+        * (consecutive_failure * config.stability_weights.consecutive_failure
             + packet_loss * config.stability_weights.packet_loss
-            + consecutive_failure * config.stability_weights.consecutive_failure);
+            + latency_score(metrics.jitter_ms, 100.0) * config.stability_weights.jitter);
 
     let period_score = (connectivity + metrics.tcp_success_rate.unwrap_or(0.0)) / 2.0;
     let time_period_score = match metrics.test_period.as_str() {

@@ -54,12 +54,12 @@ pub struct MainWeights {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StabilityWeights {
-    #[serde(rename = "可连接性")]
-    pub connectivity: f64,
-    #[serde(rename = "丢包率")]
-    pub packet_loss: f64,
     #[serde(rename = "连续失败")]
     pub consecutive_failure: f64,
+    #[serde(rename = "丢包率")]
+    pub packet_loss: f64,
+    #[serde(rename = "延迟抖动")]
+    pub jitter: f64,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -113,9 +113,9 @@ pub fn validate_config(config: &AppConfig) -> Result<(), AppError> {
     validate_weight_sum(
         "稳定性权重",
         &[
-            config.stability_weights.connectivity,
-            config.stability_weights.packet_loss,
             config.stability_weights.consecutive_failure,
+            config.stability_weights.packet_loss,
+            config.stability_weights.jitter,
         ],
     )?;
     validate_weight_sum(

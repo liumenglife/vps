@@ -144,9 +144,9 @@ pub fn history_cache_path(config: &AppConfig) -> PathBuf {
     key = hash_f64(key, config.weights.stability);
     key = hash_f64(key, config.weights.time_period);
     key = hash_f64(key, config.weights.performance);
-    key = hash_f64(key, config.stability_weights.connectivity);
-    key = hash_f64(key, config.stability_weights.packet_loss);
     key = hash_f64(key, config.stability_weights.consecutive_failure);
+    key = hash_f64(key, config.stability_weights.packet_loss);
+    key = hash_f64(key, config.stability_weights.jitter);
     key = hash_f64(key, config.time_period_weights.day);
     key = hash_f64(key, config.time_period_weights.night);
     key = hash_f64(key, config.performance_weights.avg_latency);

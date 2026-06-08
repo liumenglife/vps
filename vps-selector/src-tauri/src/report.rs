@@ -104,16 +104,16 @@ pub fn generate_markdown_report(
     report.push_str(&format!("- 性能：{:.2}\n\n", config.weights.performance));
     report.push_str("### 稳定性权重\n\n");
     report.push_str(&format!(
-        "- 可连接性：{:.2}\n",
-        config.stability_weights.connectivity
+        "- 连续失败：{:.2}\n",
+        config.stability_weights.consecutive_failure
     ));
     report.push_str(&format!(
         "- 丢包率：{:.2}\n",
         config.stability_weights.packet_loss
     ));
     report.push_str(&format!(
-        "- 连续失败：{:.2}\n\n",
-        config.stability_weights.consecutive_failure
+        "- 延迟抖动：{:.2}\n\n",
+        config.stability_weights.jitter
     ));
     report.push_str("### 分时段权重\n\n");
     report.push_str(&format!("- 白天：{:.2}\n", config.time_period_weights.day));

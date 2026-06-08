@@ -11,6 +11,9 @@ fn parses_chinese_toml_config() {
     assert_eq!(config.targets[2].ip, "198.23.228.15");
     assert_eq!(config.targets[2].city, "伊利诺伊州芝加哥");
     assert!((config.weights.stability - 0.5).abs() < 0.0001);
+    assert!((config.stability_weights.consecutive_failure - 0.45).abs() < 0.0001);
+    assert!((config.stability_weights.packet_loss - 0.40).abs() < 0.0001);
+    assert!((config.stability_weights.jitter - 0.15).abs() < 0.0001);
 }
 
 #[test]
