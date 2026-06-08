@@ -290,6 +290,7 @@ fn merge_metric_pair(left: &TargetMetrics, right: &TargetMetrics) -> TargetMetri
             right.connectivity_rate,
             right.sample_count,
         ),
+        icmp_success_count: left.icmp_success_count + right.icmp_success_count,
         icmp_packet_loss_rate: weighted_average(
             left.icmp_packet_loss_rate,
             left.sample_count,

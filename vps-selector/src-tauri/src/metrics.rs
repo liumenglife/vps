@@ -8,6 +8,7 @@ pub fn aggregate_metrics(
 ) -> TargetMetrics {
     let sample_count = samples.len();
     let icmp_sample_count = samples.len();
+    let icmp_success_count = samples.iter().filter(|sample| sample.icmp_success).count();
     let icmp_failures = samples.iter().filter(|sample| !sample.icmp_success).count();
     let icmp_latencies: Vec<f64> = samples
         .iter()
@@ -73,6 +74,7 @@ pub fn aggregate_metrics(
         ip: ip.into(),
         city: city.into(),
         connectivity_rate,
+        icmp_success_count,
         icmp_packet_loss_rate: (icmp_sample_count > 0)
             .then_some(icmp_failures as f64 / icmp_sample_count as f64),
         avg_latency_ms: average(&icmp_latencies),

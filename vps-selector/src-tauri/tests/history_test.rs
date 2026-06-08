@@ -43,6 +43,7 @@ fn metric(test_period: &str) -> TargetMetrics {
         ip: "192.3.81.8".into(),
         city: "纽约".into(),
         connectivity_rate: Some(1.0),
+        icmp_success_count: 10,
         icmp_packet_loss_rate: Some(0.0),
         avg_latency_ms: Some(20.0),
         p95_latency_ms: Some(30.0),

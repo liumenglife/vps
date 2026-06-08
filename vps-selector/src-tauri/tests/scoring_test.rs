@@ -14,6 +14,7 @@ fn aggregates_probe_samples_into_target_metrics() {
     let metrics = aggregate_metrics("203.0.113.10", "东京", "白天", &samples);
 
     assert_eq!(metrics.connectivity_rate, Some(2.0 / 3.0));
+    assert_eq!(metrics.icmp_success_count, 2);
     assert_eq!(metrics.icmp_packet_loss_rate, Some(1.0 / 3.0));
     assert_eq!(metrics.avg_latency_ms, Some(20.0));
     assert_eq!(metrics.p95_latency_ms, Some(30.0));
@@ -32,6 +33,7 @@ fn good_target_scores_higher_than_bad_target() {
         ip: "203.0.113.10".into(),
         city: "东京".into(),
         connectivity_rate: Some(1.0),
+        icmp_success_count: 10,
         icmp_packet_loss_rate: Some(0.0),
         avg_latency_ms: Some(20.0),
         p95_latency_ms: Some(35.0),
@@ -48,6 +50,7 @@ fn good_target_scores_higher_than_bad_target() {
         ip: "203.0.113.20".into(),
         city: "大阪".into(),
         connectivity_rate: Some(0.4),
+        icmp_success_count: 5,
         icmp_packet_loss_rate: Some(0.5),
         avg_latency_ms: Some(280.0),
         p95_latency_ms: Some(600.0),
@@ -71,6 +74,7 @@ fn missing_icmp_but_tcp_available_is_low_confidence() {
         ip: "203.0.113.30".into(),
         city: "首尔".into(),
         connectivity_rate: Some(1.0),
+        icmp_success_count: 0,
         icmp_packet_loss_rate: None,
         avg_latency_ms: None,
         p95_latency_ms: None,
@@ -98,6 +102,7 @@ fn day_and_night_test_periods_do_not_add_incomplete_period_sample_reason() {
             ip: "203.0.113.45".into(),
             city: "台北".into(),
             connectivity_rate: Some(1.0),
+            icmp_success_count: 10,
             icmp_packet_loss_rate: Some(0.0),
             avg_latency_ms: Some(25.0),
             p95_latency_ms: Some(40.0),
@@ -127,6 +132,7 @@ fn other_test_period_does_not_add_incomplete_period_sample_reason() {
         ip: "203.0.113.40".into(),
         city: "新加坡".into(),
         connectivity_rate: Some(1.0),
+        icmp_success_count: 10,
         icmp_packet_loss_rate: Some(0.0),
         avg_latency_ms: Some(25.0),
         p95_latency_ms: Some(40.0),
@@ -152,6 +158,7 @@ fn full_day_test_period_does_not_add_incomplete_period_sample_reason() {
         ip: "203.0.113.50".into(),
         city: "香港".into(),
         connectivity_rate: Some(1.0),
+        icmp_success_count: 10,
         icmp_packet_loss_rate: Some(0.0),
         avg_latency_ms: Some(18.0),
         p95_latency_ms: Some(32.0),

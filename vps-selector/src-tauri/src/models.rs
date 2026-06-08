@@ -26,6 +26,7 @@ pub struct TargetMetrics {
     pub ip: String,
     pub city: String,
     pub connectivity_rate: Option<f64>,
+    pub icmp_success_count: usize,
     pub icmp_packet_loss_rate: Option<f64>,
     pub avg_latency_ms: Option<f64>,
     pub p95_latency_ms: Option<f64>,
