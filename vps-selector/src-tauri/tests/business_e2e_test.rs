@@ -10,6 +10,8 @@ async fn runs_business_e2e_from_chinese_toml_to_markdown_report() {
     config.probe.icmp_interval_ms = 1;
     config.probe.tcp_timeout_ms = 300;
     config.probe.concurrency = 3;
+    config.probe.day_period = "00:00-23:59".into();
+    config.probe.night_period = "23:59-00:00".into();
     config.ports.default_ports = vec![22, 443];
 
     let (metrics, scores, report) = run_probe_once(&config)
