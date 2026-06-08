@@ -2,18 +2,20 @@ use crate::config::AppConfig;
 use crate::models::{TargetMetrics, TargetScore};
 
 pub fn score_target(config: &AppConfig, metrics: &TargetMetrics) -> TargetScore {
-    let reasons = metrics.missing_indicators.clone();
+    let mut reasons = metrics.missing_indicators.clone();
 
     let connectivity = metrics.connectivity_rate.unwrap_or(0.0);
-    let packet_loss = metrics
-        .icmp_packet_loss_rate
-        .map(|loss| 1.0 - loss)
-        .unwrap_or(0.0);
-    let consecutive_failure = 1.0 - (metrics.consecutive_failures as f64 / 10.0).min(1.0);
-    let stability_score = 100.0
-        * (consecutive_failure * config.stability_weights.consecutive_failure
-            + packet_loss * config.stability_weights.packet_loss
-            + latency_score(metrics.jitter_ms, 100.0) * config.stability_weights.jitter);
+    let stability_score = (score_consecutive_failures(metrics.consecutive_failures)
+        * config.stability_weights.consecutive_failure
+        + score_packet_loss(metrics.icmp_packet_loss_rate) * config.stability_weights.packet_loss
+        + score_jitter_stability(
+            metrics.jitter_ms,
+            metrics.icmp_success_count,
+            metrics.sample_count,
+        ) * config.stability_weights.jitter)
+        .clamp(0.0, 100.0);
+
+    add_stability_reasons(metrics, &mut reasons);
 
     let period_score = (connectivity + metrics.tcp_success_rate.unwrap_or(0.0)) / 2.0;
     let time_period_score = match metrics.test_period.as_str() {
@@ -43,6 +45,103 @@ pub fn score_target(config: &AppConfig, metrics: &TargetMetrics) -> TargetScore 
         performance_score,
         confidence: confidence(metrics),
         reasons,
+    }
+}
+
+pub fn score_consecutive_failures(value: u32) -> f64 {
+    match value {
+        0 => 100.0,
+        1 => 80.0,
+        2 => 50.0,
+        3 => 0.0,
+        4 => -50.0,
+        _ => -100.0,
+    }
+}
+
+pub fn score_packet_loss(value: Option<f64>) -> f64 {
+    let Some(value) = value else {
+        return -100.0;
+    };
+
+    if value == 0.0 {
+        100.0
+    } else if value <= 0.01 {
+        90.0
+    } else if value <= 0.03 {
+        75.0
+    } else if value <= 0.05 {
+        50.0
+    } else if value <= 0.10 {
+        0.0
+    } else if value <= 0.20 {
+        -50.0
+    } else {
+        -100.0
+    }
+}
+
+pub fn score_jitter_stability(
+    jitter_ms: Option<f64>,
+    icmp_success_count: usize,
+    sample_count: usize,
+) -> f64 {
+    if icmp_success_count == 0 {
+        return -100.0;
+    }
+    if icmp_success_count == 1 {
+        return -80.0;
+    }
+    if sample_count > 0 && (icmp_success_count as f64 / sample_count as f64) < 0.2 {
+        return -50.0;
+    }
+
+    let Some(jitter_ms) = jitter_ms else {
+        return -100.0;
+    };
+
+    if jitter_ms <= 5.0 {
+        100.0
+    } else if jitter_ms <= 15.0 {
+        80.0
+    } else if jitter_ms <= 30.0 {
+        50.0
+    } else if jitter_ms <= 60.0 {
+        0.0
+    } else if jitter_ms <= 100.0 {
+        -50.0
+    } else {
+        -100.0
+    }
+}
+
+fn add_stability_reasons(metrics: &TargetMetrics, reasons: &mut Vec<String>) {
+    if metrics.consecutive_failures >= 4 {
+        reasons.push(format!(
+            "连续失败 {} 次，稳定性重罚",
+            metrics.consecutive_failures
+        ));
+    }
+
+    if let Some(packet_loss) = metrics.icmp_packet_loss_rate {
+        if packet_loss > 0.10 {
+            reasons.push(format!(
+                "丢包率 {:.2}%，线路质量严重不稳",
+                packet_loss * 100.0
+            ));
+        }
+    }
+
+    if metrics.icmp_success_count == 0 {
+        reasons.push("ICMP 成功样本为 0，稳定性重罚".into());
+    } else if metrics.icmp_success_count == 1 {
+        reasons.push("ICMP 成功样本仅 1 个，稳定性重罚".into());
+    }
+
+    if let Some(jitter_ms) = metrics.jitter_ms {
+        if jitter_ms > 60.0 {
+            reasons.push(format!("抖动 {:.2} ms，延迟波动严重", jitter_ms));
+        }
     }
 }
 

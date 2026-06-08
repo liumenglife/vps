@@ -1,7 +1,136 @@
 use vps_selector::config::parse_config;
 use vps_selector::metrics::aggregate_metrics;
 use vps_selector::models::{ProbeSample, TargetMetrics, TcpProbeResult};
-use vps_selector::scoring::score_target;
+use vps_selector::scoring::{
+    score_consecutive_failures, score_jitter_stability, score_packet_loss, score_target,
+};
+
+#[test]
+fn scores_consecutive_failures_with_negative_penalties() {
+    assert_eq!(score_consecutive_failures(0), 100.0);
+    assert_eq!(score_consecutive_failures(1), 80.0);
+    assert_eq!(score_consecutive_failures(2), 50.0);
+    assert_eq!(score_consecutive_failures(3), 0.0);
+    assert_eq!(score_consecutive_failures(4), -50.0);
+    assert_eq!(score_consecutive_failures(5), -100.0);
+    assert_eq!(score_consecutive_failures(8), -100.0);
+}
+
+#[test]
+fn scores_packet_loss_with_missing_and_high_loss_penalties() {
+    assert_eq!(score_packet_loss(None), -100.0);
+    assert_eq!(score_packet_loss(Some(0.0)), 100.0);
+    assert_eq!(score_packet_loss(Some(0.01)), 90.0);
+    assert_eq!(score_packet_loss(Some(0.03)), 75.0);
+    assert_eq!(score_packet_loss(Some(0.05)), 50.0);
+    assert_eq!(score_packet_loss(Some(0.10)), 0.0);
+    assert_eq!(score_packet_loss(Some(0.20)), -50.0);
+    assert_eq!(score_packet_loss(Some(0.21)), -100.0);
+}
+
+#[test]
+fn scores_jitter_stability_with_icmp_validity_before_jitter() {
+    assert_eq!(score_jitter_stability(Some(1.0), 0, 10), -100.0);
+    assert_eq!(score_jitter_stability(Some(1.0), 1, 10), -80.0);
+    assert_eq!(score_jitter_stability(Some(1.0), 2, 11), -50.0);
+    assert_eq!(score_jitter_stability(None, 2, 10), -100.0);
+    assert_eq!(score_jitter_stability(Some(5.0), 2, 10), 100.0);
+    assert_eq!(score_jitter_stability(Some(15.0), 2, 10), 80.0);
+    assert_eq!(score_jitter_stability(Some(30.0), 2, 10), 50.0);
+    assert_eq!(score_jitter_stability(Some(60.0), 2, 10), 0.0);
+    assert_eq!(score_jitter_stability(Some(100.0), 2, 10), -50.0);
+    assert_eq!(score_jitter_stability(Some(100.01), 2, 10), -100.0);
+}
+
+#[test]
+fn stability_score_uses_negative_incentive_weights_and_clamps_to_zero() {
+    let config = parse_config(include_str!("fixtures/valid-config.toml")).unwrap();
+    let metrics = TargetMetrics {
+        ip: "203.0.113.60".into(),
+        city: "曼谷".into(),
+        connectivity_rate: Some(1.0),
+        icmp_success_count: 0,
+        icmp_packet_loss_rate: Some(0.5),
+        avg_latency_ms: Some(20.0),
+        p95_latency_ms: Some(35.0),
+        jitter_ms: Some(120.0),
+        tcp_success_rate: Some(1.0),
+        tcp_avg_latency_ms: Some(8.0),
+        consecutive_failures: 5,
+        traceroute_hops: Some(8),
+        sample_count: 10,
+        test_period: "白天".into(),
+        missing_indicators: vec![],
+    };
+
+    let score = score_target(&config, &metrics);
+
+    assert_eq!(score.stability_score, 0.0);
+}
+
+#[test]
+fn stability_score_does_not_use_connectivity_rate() {
+    let config = parse_config(include_str!("fixtures/valid-config.toml")).unwrap();
+    let mut connected = stable_metrics();
+    connected.connectivity_rate = Some(1.0);
+    let mut disconnected = stable_metrics();
+    disconnected.connectivity_rate = Some(0.0);
+
+    assert_eq!(
+        score_target(&config, &connected).stability_score,
+        score_target(&config, &disconnected).stability_score
+    );
+}
+
+#[test]
+fn adds_reasons_for_stability_penalties() {
+    let config = parse_config(include_str!("fixtures/valid-config.toml")).unwrap();
+    let metrics = TargetMetrics {
+        ip: "203.0.113.70".into(),
+        city: "河内".into(),
+        connectivity_rate: Some(1.0),
+        icmp_success_count: 1,
+        icmp_packet_loss_rate: Some(0.125),
+        avg_latency_ms: Some(20.0),
+        p95_latency_ms: Some(35.0),
+        jitter_ms: Some(80.0),
+        tcp_success_rate: Some(1.0),
+        tcp_avg_latency_ms: Some(8.0),
+        consecutive_failures: 4,
+        traceroute_hops: Some(8),
+        sample_count: 10,
+        test_period: "白天".into(),
+        missing_indicators: vec![],
+    };
+
+    let score = score_target(&config, &metrics);
+
+    assert!(score
+        .reasons
+        .contains(&"连续失败 4 次，稳定性重罚".into()));
+    assert!(score
+        .reasons
+        .contains(&"丢包率 12.50%，线路质量严重不稳".into()));
+    assert!(score
+        .reasons
+        .contains(&"ICMP 成功样本仅 1 个，稳定性重罚".into()));
+    assert!(score
+        .reasons
+        .contains(&"抖动 80.00 ms，延迟波动严重".into()));
+}
+
+#[test]
+fn adds_reason_when_icmp_success_samples_are_zero() {
+    let config = parse_config(include_str!("fixtures/valid-config.toml")).unwrap();
+    let mut metrics = stable_metrics();
+    metrics.icmp_success_count = 0;
+
+    let score = score_target(&config, &metrics);
+
+    assert!(score
+        .reasons
+        .contains(&"ICMP 成功样本为 0，稳定性重罚".into()));
+}
 
 #[test]
 fn aggregates_probe_samples_into_target_metrics() {
@@ -201,5 +330,25 @@ fn tcp(success: bool, latency_ms: Option<f64>) -> TcpProbeResult {
         success,
         latency_ms,
         error: None,
+    }
+}
+
+fn stable_metrics() -> TargetMetrics {
+    TargetMetrics {
+        ip: "203.0.113.80".into(),
+        city: "胡志明".into(),
+        connectivity_rate: Some(1.0),
+        icmp_success_count: 10,
+        icmp_packet_loss_rate: Some(0.0),
+        avg_latency_ms: Some(20.0),
+        p95_latency_ms: Some(35.0),
+        jitter_ms: Some(5.0),
+        tcp_success_rate: Some(1.0),
+        tcp_avg_latency_ms: Some(8.0),
+        consecutive_failures: 0,
+        traceroute_hops: Some(8),
+        sample_count: 10,
+        test_period: "白天".into(),
+        missing_indicators: vec![],
     }
 }
