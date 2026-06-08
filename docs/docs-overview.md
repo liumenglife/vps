@@ -10,6 +10,8 @@
 
 - [VPS 线路选择工具规格](superpowers/specs/101-vps-route-selection-design.md)
 - [VPS 线路选择工具实施计划](superpowers/plans/101-vps-route-selection-implementation-plan.md)
+- [稳定性评分重构规格](superpowers/specs/102-stability-scoring-redesign-design.md)
+- [稳定性评分重构实施计划](superpowers/plans/102-stability-scoring-redesign-implementation-plan.md)
 
 ## 验证报告
 
