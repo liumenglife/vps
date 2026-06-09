@@ -57,11 +57,11 @@ pub async fn run_probe_once_with_logger(
                     &target_period,
                     target_logger.as_deref(),
                 )
-                    .await
-                    .unwrap_or_else(|error| {
-                        let sample = failed_probe_sample(&target, format!("目标探测失败：{error}"));
-                        aggregate_metrics(&target.ip, &target.city, &target_period, &[sample])
-                    })
+                .await
+                .unwrap_or_else(|error| {
+                    let sample = failed_probe_sample(&target, format!("目标探测失败：{error}"));
+                    aggregate_metrics(&target.ip, &target.city, &target_period, &[sample])
+                })
             }),
         ));
     }
@@ -149,6 +149,7 @@ pub fn history_cache_path(config: &AppConfig) -> PathBuf {
     key = hash_f64(key, config.stability_weights.jitter);
     key = hash_f64(key, config.time_period_weights.day);
     key = hash_f64(key, config.time_period_weights.night);
+    key = hash_f64(key, config.time_period_weights.other);
     key = hash_f64(key, config.performance_weights.avg_latency);
     key = hash_f64(key, config.performance_weights.p95_latency);
     key = hash_f64(key, config.performance_weights.jitter);
@@ -250,12 +251,7 @@ async fn probe_target(
         tokio::time::sleep(sleep_duration).await;
     }
 
-    let metrics = aggregate_metrics(
-        &target.ip,
-        &target.city,
-        test_period,
-        &samples,
-    );
+    let metrics = aggregate_metrics(&target.ip, &target.city, test_period, &samples);
     emit_probe_log(
         logger,
         format_target_complete_log(
@@ -371,10 +367,7 @@ pub fn format_traceroute_start_log(ip: &str) -> String {
 pub fn format_traceroute_result_log(ip: &str, hops: Option<u32>, errors: &[String]) -> String {
     match hops {
         Some(hops) => format!("[traceroute] done ip={ip} hops={hops}"),
-        None => format!(
-            "[traceroute] failed ip={ip} error={}",
-            first_error(errors)
-        ),
+        None => format!("[traceroute] failed ip={ip} error={}", first_error(errors)),
     }
 }
 
@@ -434,7 +427,10 @@ fn format_percent(value: Option<f64>) -> String {
 }
 
 fn first_error(errors: &[String]) -> &str {
-    errors.first().map(String::as_str).unwrap_or("unknown error")
+    errors
+        .first()
+        .map(String::as_str)
+        .unwrap_or("unknown error")
 }
 
 async fn run_traceroute(ip: &str) -> Result<(Option<u32>, Vec<String>), AppError> {
@@ -557,7 +553,13 @@ mod tests {
             "[ping] sample=2 ip=192.0.2.10 success latency=18.42ms loss=0%"
         );
         assert_eq!(
-            format_icmp_sample_log("192.0.2.10", 3, false, None, &["request timeout".to_string()]),
+            format_icmp_sample_log(
+                "192.0.2.10",
+                3,
+                false,
+                None,
+                &["request timeout".to_string()]
+            ),
             "[ping] sample=3 ip=192.0.2.10 failed loss=100% error=request timeout"
         );
         assert_eq!(

@@ -42,6 +42,9 @@ fn generates_chinese_markdown_report_with_weights_and_recommendation() {
     assert!(report.contains("- 连续失败：0.45"));
     assert!(report.contains("- 丢包率：0.40"));
     assert!(report.contains("- 延迟抖动：0.15"));
+    assert!(report.contains("- 白天：0.50"));
+    assert!(report.contains("- 晚上：0.30"));
+    assert!(report.contains("- 其他：0.20"));
     assert!(report.contains("可连接率"));
     assert!(report.contains("192.3.81.8"));
     assert!(report.contains("纽约"));

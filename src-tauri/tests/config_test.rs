@@ -14,6 +14,9 @@ fn parses_chinese_toml_config() {
     assert!((config.stability_weights.consecutive_failure - 0.45).abs() < 0.0001);
     assert!((config.stability_weights.packet_loss - 0.40).abs() < 0.0001);
     assert!((config.stability_weights.jitter - 0.15).abs() < 0.0001);
+    assert!((config.time_period_weights.day - 0.50).abs() < 0.0001);
+    assert!((config.time_period_weights.night - 0.30).abs() < 0.0001);
+    assert!((config.time_period_weights.other - 0.20).abs() < 0.0001);
 }
 
 #[test]
@@ -21,4 +24,12 @@ fn rejects_invalid_weight_sum() {
     let input = include_str!("fixtures/invalid-weight.toml");
     let error = parse_config(input).unwrap_err().to_string();
     assert!(error.contains("总权重"));
+}
+
+#[test]
+fn rejects_invalid_time_period_weight_sum() {
+    let input =
+        include_str!("fixtures/valid-config.toml").replace("\"其他\" = 0.20", "\"其他\" = 0.30");
+    let error = parse_config(&input).unwrap_err().to_string();
+    assert!(error.contains("分时段权重"));
 }

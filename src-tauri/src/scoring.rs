@@ -21,7 +21,7 @@ pub fn score_target(config: &AppConfig, metrics: &TargetMetrics) -> TargetScore 
     let time_period_score = match metrics.test_period.as_str() {
         "白天" => 100.0 * period_score * config.time_period_weights.day,
         "晚上" => 100.0 * period_score * config.time_period_weights.night,
-        _ => 100.0 * period_score,
+        _ => 100.0 * period_score * config.time_period_weights.other,
     };
     let performance_score = 100.0
         * (latency_score(metrics.avg_latency_ms, 300.0) * config.performance_weights.avg_latency

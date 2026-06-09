@@ -101,3 +101,15 @@ fn history_cache_path_is_isolated_by_reporting_and_scoring_config() {
         history_cache_path(&changed_weights)
     );
 }
+
+#[test]
+fn history_cache_path_is_isolated_by_other_time_period_weight() {
+    let first = parse_config(include_str!("fixtures/valid-config.toml")).unwrap();
+    let mut changed_other = first.clone();
+    changed_other.time_period_weights.other = first.time_period_weights.other + 0.01;
+
+    assert_ne!(
+        history_cache_path(&first),
+        history_cache_path(&changed_other)
+    );
+}
